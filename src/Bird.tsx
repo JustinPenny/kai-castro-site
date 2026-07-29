@@ -16,8 +16,8 @@ function boxShadowFor(frameKey: string): string {
 
 interface BirdProps {
   flying: boolean
-  offsetX: string
-  offsetY: string
+  offsetX: number
+  offsetY: number
   durationMs: number
 }
 

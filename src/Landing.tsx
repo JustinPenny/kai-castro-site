@@ -1,11 +1,10 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Bird from './Bird'
 import { CORNERS, SECTION_CONTENT, type SectionKey } from './sections'
 import './Landing.css'
 
 const FLIGHT_MS = 700
-
-type Phase = 'idle' | 'flying-out' | 'panel' | 'flying-back'
+const IDLE_MS = 2000
 
 function centerOf(el: HTMLElement) {
   const r = el.getBoundingClientRect()
@@ -13,46 +12,82 @@ function centerOf(el: HTMLElement) {
 }
 
 export default function Landing() {
-  const [phase, setPhase] = useState<Phase>('idle')
+  const [birdOffset, setBirdOffset] = useState({ x: 0, y: 0 })
+  const [flying, setFlying] = useState(false)
   const [target, setTarget] = useState<SectionKey | null>(null)
-  const [offset, setOffset] = useState({ x: 0, y: 0 })
+  const [panelOpen, setPanelOpen] = useState(false)
 
   const nestRef = useRef<HTMLDivElement>(null)
   const cornerRefs = useRef<Partial<Record<SectionKey, HTMLButtonElement>>>({})
+  const flightTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const flying = phase === 'flying-out' || phase === 'flying-back'
-  const atNest = phase === 'idle' || phase === 'flying-back'
+  // Mirrors the latest render's state so the delayed idle callback (scheduled
+  // up to 2s ago) can check current flying/panelOpen instead of stale values.
+  const latest = useRef({ flying, panelOpen })
+  useEffect(() => {
+    latest.current = { flying, panelOpen }
+  })
 
-  const offsetX = atNest ? '0px' : `${offset.x}px`
-  const offsetY = atNest ? '0px' : `${offset.y}px`
-
-  function goTo(key: SectionKey) {
-    if (phase !== 'idle') return
-
-    const nestEl = nestRef.current
-    const cornerEl = cornerRefs.current[key]
-    if (nestEl && cornerEl) {
-      const nestCenter = centerOf(nestEl)
-      const cornerCenter = centerOf(cornerEl)
-      setOffset({ x: cornerCenter.x - nestCenter.x, y: cornerCenter.y - nestCenter.y })
+  useEffect(() => {
+    return () => {
+      if (flightTimer.current) clearTimeout(flightTimer.current)
+      if (idleTimer.current) clearTimeout(idleTimer.current)
     }
+  }, [])
 
-    setTarget(key)
-    setPhase('flying-out')
-    setTimeout(() => setPhase('panel'), FLIGHT_MS)
-  }
-
-  function goHome() {
-    if (phase !== 'panel') return
-    setPhase('flying-back')
-    setTimeout(() => {
-      setPhase('idle')
-      setTarget(null)
+  function flyTo(x: number, y: number, after?: () => void) {
+    if (flightTimer.current) clearTimeout(flightTimer.current)
+    setFlying(true)
+    setBirdOffset({ x, y })
+    flightTimer.current = setTimeout(() => {
+      setFlying(false)
+      after?.()
     }, FLIGHT_MS)
   }
 
+  function goTo(key: SectionKey) {
+    if (flying || panelOpen) return
+    const nestEl = nestRef.current
+    const cornerEl = cornerRefs.current[key]
+    if (!nestEl || !cornerEl) return
+    const nestCenter = centerOf(nestEl)
+    const cornerCenter = centerOf(cornerEl)
+    setTarget(key)
+    flyTo(cornerCenter.x - nestCenter.x, cornerCenter.y - nestCenter.y, () => setPanelOpen(true))
+  }
+
+  function goHome() {
+    if (flying) return
+    setPanelOpen(false)
+    flyTo(0, 0, () => setTarget(null))
+  }
+
+  function handleBackgroundClick(e: React.MouseEvent<HTMLDivElement>) {
+    if (flying || panelOpen) return
+    if ((e.target as HTMLElement).closest('.corner-node')) return
+    const nestEl = nestRef.current
+    if (!nestEl) return
+    const nestCenter = centerOf(nestEl)
+    flyTo(e.clientX - nestCenter.x, e.clientY - nestCenter.y)
+  }
+
+  function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+    const clientX = e.clientX
+    const clientY = e.clientY
+    if (idleTimer.current) clearTimeout(idleTimer.current)
+    idleTimer.current = setTimeout(() => {
+      const { flying: isFlying, panelOpen: isPanelOpen } = latest.current
+      if (isFlying || isPanelOpen) return
+      const nestEl = nestRef.current
+      if (!nestEl) return
+      const nestCenter = centerOf(nestEl)
+      flyTo(clientX - nestCenter.x, clientY - nestCenter.y)
+    }, IDLE_MS)
+  }
+
   return (
-    <div className="landing">
+    <div className="landing" onClick={handleBackgroundClick} onMouseMove={handleMouseMove}>
       {CORNERS.map((c) => (
         <button
           key={c.key}
@@ -62,7 +97,7 @@ export default function Landing() {
           }}
           className={`corner-node corner-${c.key}`}
           onClick={() => goTo(c.key)}
-          disabled={phase !== 'idle'}
+          disabled={flying || panelOpen}
         >
           <span className="corner-glyph" aria-hidden="true">
             {c.glyph}
@@ -80,10 +115,10 @@ export default function Landing() {
         <div className="nest-pixel" aria-hidden="true" />
       </div>
 
-      <Bird flying={flying} offsetX={offsetX} offsetY={offsetY} durationMs={FLIGHT_MS} />
+      <Bird flying={flying} offsetX={birdOffset.x} offsetY={birdOffset.y} durationMs={FLIGHT_MS} />
 
       {target && (
-        <div className={`section-panel ${phase === 'panel' ? 'is-open' : ''}`}>
+        <div className={`section-panel ${panelOpen ? 'is-open' : ''}`}>
           <button type="button" className="back-btn" onClick={goHome}>
             &lt; back to nest
           </button>
