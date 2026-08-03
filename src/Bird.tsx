@@ -1,18 +1,13 @@
-import { useEffect, useState } from 'react'
-import { BIRD_FRAMES, BIRD_W, BIRD_H } from './birdFrames'
+import { useEffect, useRef, useState } from 'react'
 
-const CELL = 4
+// Same on-screen footprint as the old pixel-grid sprite (72px wide).
+const SIZE = 72
 
-function boxShadowFor(frameKey: string): string {
-  const cells = BIRD_FRAMES[frameKey]
-  const shadows: string[] = []
-  for (let i = 0; i < cells.length; i += 2) {
-    const row = cells[i]
-    const col = cells[i + 1]
-    shadows.push(`${col * CELL}px ${row * CELL}px 0 0 var(--ink)`)
-  }
-  return shadows.join(',')
-}
+const SRC = {
+  perched: '/bird_idle.png',
+  fly_up: '/bird_up.png',
+  fly_down: '/bird_down.png',
+} as const
 
 interface BirdProps {
   flying: boolean
@@ -23,6 +18,8 @@ interface BirdProps {
 
 export default function Bird({ flying, offsetX, offsetY, durationMs }: BirdProps) {
   const [flapFrame, setFlapFrame] = useState<'fly_up' | 'fly_down'>('fly_up')
+  const [facingLeft, setFacingLeft] = useState(false)
+  const prevOffsetX = useRef(offsetX)
 
   useEffect(() => {
     if (!flying) return
@@ -32,20 +29,32 @@ export default function Bird({ flying, offsetX, offsetY, durationMs }: BirdProps
     return () => clearInterval(id)
   }, [flying])
 
+  // Face the direction of travel: a new target to the left of where the
+  // bird currently is means it's flying left, so mirror the (right-facing) art.
+  useEffect(() => {
+    const dx = offsetX - prevOffsetX.current
+    if (dx < -2) setFacingLeft(true)
+    else if (dx > 2) setFacingLeft(false)
+    prevOffsetX.current = offsetX
+  }, [offsetX])
+
   const frameKey = flying ? flapFrame : 'perched'
 
   return (
-    <div
+    <img
       className="bird"
+      src={SRC[frameKey]}
+      width={SIZE}
+      height={SIZE}
       style={{
-        width: BIRD_W * CELL,
-        height: BIRD_H * CELL,
-        transform: `translate(-50%, -50%) translate(${offsetX}px, ${offsetY}px)`,
-        transition: `transform ${durationMs}ms cubic-bezier(0.45, 0, 0.55, 1)`,
+        // `translate` animates the flight; `scale` is a separate CSS property
+        // with no transition, so the left/right mirror snaps instantly.
+        translate: `calc(-50% + ${offsetX}px) calc(-50% + ${offsetY}px)`,
+        scale: facingLeft ? '-1 1' : '1 1',
+        transition: `translate ${durationMs}ms cubic-bezier(0.45, 0, 0.55, 1)`,
       }}
+      alt=""
       aria-hidden="true"
-    >
-      <div className="bird-pixel" style={{ width: CELL, height: CELL, boxShadow: boxShadowFor(frameKey) }} />
-    </div>
+    />
   )
 }
