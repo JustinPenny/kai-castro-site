@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
+import birdIdle from './assets/bird_idle.webp'
+import birdUp from './assets/bird_up.webp'
+import birdDown from './assets/bird_down.webp'
 
 // Same on-screen footprint as the old pixel-grid sprite (72px wide).
 const SIZE = 72
 
 const SRC = {
-  perched: '/bird_idle.png',
-  fly_up: '/bird_up.png',
-  fly_down: '/bird_down.png',
+  perched: birdIdle,
+  fly_up: birdUp,
+  fly_down: birdDown,
 } as const
 
 interface BirdProps {

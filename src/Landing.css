@@ -11,21 +11,18 @@
   bottom: 0;
   left: 0;
   width: 100%;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  padding: 0 2px;
+  height: 64px; /* matches grass.webp's native 64x64 tile size */
+  background-image: url('./assets/grass.webp');
+  background-repeat: repeat-x;
+  background-position: left bottom;
+  background-size: auto 100%;
+  image-rendering: pixelated;
   pointer-events: none;
-}
-
-.grass-tick {
-  flex: none;
-  width: 2px;
-  background: var(--ink);
 }
 
 .corner-node {
   position: absolute;
+  z-index: 3;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -74,11 +71,11 @@
   right: 6vw;
 }
 .corner-streams {
-  bottom: 6vh;
+  bottom: calc(6vh + 70px); /* clears the 64px grass-strip, plus a buffer */
   left: 6vw;
 }
 .corner-socials {
-  bottom: 6vh;
+  bottom: calc(6vh + 70px);
   right: 6vw;
 }
 
@@ -111,10 +108,10 @@
 
 .sky-strip {
   position: absolute;
-  top: 2vh;
+  top: 3vh;
   left: 0;
   width: 100%;
-  height: 80px;
+  height: 100px;
   overflow: hidden;
   pointer-events: none;
 }
@@ -122,7 +119,7 @@
 .wordmark {
   margin: 0;
   font-family: var(--font-pixel);
-  font-size: 20px;
+  font-size: 30px;
   letter-spacing: 0.04em;
   color: var(--ink);
 }
@@ -130,7 +127,7 @@
 .tagline {
   margin: 0;
   font-family: var(--font-pixel);
-  font-size: 10px;
+  font-size: 15px;
   color: var(--ink);
   opacity: 0.6;
 }
@@ -144,37 +141,34 @@
   image-rendering: pixelated;
 }
 
-.sky-sun {
+.sky-body {
   position: absolute;
   top: 50%;
-  left: 50%;
   transform: translate(-50%, -50%);
   z-index: 1;
+  image-rendering: pixelated;
 }
 
-.sky-decor-pixel {
+.cloud-scatter,
+.star-scatter {
   position: absolute;
-  top: 0;
-  left: 0;
-}
-
-.cloud-track {
-  position: absolute;
-  top: 50%;
-  left: 0;
+  inset: 0;
   z-index: 2;
 }
 
 .cloud-tile {
   position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
 }
 
 .cloud-pixel {
   position: absolute;
   top: 0;
   left: 0;
+}
+
+.star-cluster {
+  position: absolute;
+  image-rendering: pixelated;
 }
 
 .section-panel {
@@ -264,6 +258,6 @@
     font-size: 14px;
   }
   .wordmark {
-    font-size: 15px;
+    font-size: 23px;
   }
 }

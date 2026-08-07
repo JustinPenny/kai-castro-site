@@ -8,6 +8,10 @@ import './Landing.css'
 
 const FLIGHT_MS = 700
 const IDLE_MS = 2000
+// The idle-triggered flight is skipped if the cursor is already within this
+// many px of the bird's current spot -- avoids flying a barely-noticeable
+// short hop when the mouse settles close to where the bird already is.
+const MIN_IDLE_FLIGHT_DISTANCE = 80
 const STUMP_CELL = 6
 // Purely visual nudge so the stump's top surface lines up under the perched
 // bird instead of the bird sitting mid-trunk. Does not affect stump-anchor's
@@ -41,10 +45,11 @@ export default function Landing() {
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Mirrors the latest render's state so the delayed idle callback (scheduled
-  // up to 2s ago) can check current flying/panelOpen instead of stale values.
-  const latest = useRef({ flying, panelOpen })
+  // up to 2s ago) can check current flying/panelOpen/birdOffset instead of
+  // stale values.
+  const latest = useRef({ flying, panelOpen, birdOffset })
   useEffect(() => {
-    latest.current = { flying, panelOpen }
+    latest.current = { flying, panelOpen, birdOffset }
   })
 
   useEffect(() => {
@@ -81,6 +86,26 @@ export default function Landing() {
     flyTo(0, 0, () => setTarget(null))
   }
 
+  // Shared by both the idle-mouse-tracking path and (re)armed after a click,
+  // so a click resets the idle clock instead of leaving a stale timer from
+  // before the click that fires again right after -- which was flying the
+  // bird to the same spot twice in a row.
+  function scheduleIdleFlight(clientX: number, clientY: number) {
+    if (idleTimer.current) clearTimeout(idleTimer.current)
+    idleTimer.current = setTimeout(() => {
+      const { flying: isFlying, panelOpen: isPanelOpen, birdOffset: currentOffset } = latest.current
+      if (isFlying || isPanelOpen) return
+      const stumpEl = stumpRef.current
+      if (!stumpEl) return
+      const stumpCenter = centerOf(stumpEl)
+      const targetX = clientX - stumpCenter.x
+      const targetY = clientY - stumpCenter.y
+      const distance = Math.hypot(targetX - currentOffset.x, targetY - currentOffset.y)
+      if (distance < MIN_IDLE_FLIGHT_DISTANCE) return
+      flyTo(targetX, targetY)
+    }, IDLE_MS)
+  }
+
   function handleBackgroundClick(e: React.MouseEvent<HTMLDivElement>) {
     if (flying || panelOpen) return
     if ((e.target as HTMLElement).closest('.corner-node')) return
@@ -88,27 +113,18 @@ export default function Landing() {
     if (!stumpEl) return
     const stumpCenter = centerOf(stumpEl)
     flyTo(e.clientX - stumpCenter.x, e.clientY - stumpCenter.y)
+    // Re-arm the idle clock from the click position instead of leaving
+    // whatever was pending from before the click.
+    scheduleIdleFlight(e.clientX, e.clientY)
   }
 
   function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
-    const clientX = e.clientX
-    const clientY = e.clientY
-    if (idleTimer.current) clearTimeout(idleTimer.current)
-    idleTimer.current = setTimeout(() => {
-      const { flying: isFlying, panelOpen: isPanelOpen } = latest.current
-      if (isFlying || isPanelOpen) return
-      const stumpEl = stumpRef.current
-      if (!stumpEl) return
-      const stumpCenter = centerOf(stumpEl)
-      flyTo(clientX - stumpCenter.x, clientY - stumpCenter.y)
-    }, IDLE_MS)
+    scheduleIdleFlight(e.clientX, e.clientY)
   }
 
   return (
     <div className="landing" onClick={handleBackgroundClick} onMouseMove={handleMouseMove}>
-      <div className="sky-strip">
-        <SkyDecor />
-      </div>
+      <SkyDecor />
 
       <GrassStrip />
 
