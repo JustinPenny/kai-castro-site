@@ -4,6 +4,7 @@ import SkyDecor from './SkyDecor'
 import GrassStrip from './GrassStrip'
 import { CORNERS, SECTION_CONTENT, type SectionKey } from './sections'
 import { STUMP_CELLS, STUMP_W, STUMP_H } from './stumpFrame'
+import branchImg from './assets/branch.webp'
 import './Landing.css'
 
 const FLIGHT_MS = 700
@@ -127,6 +128,8 @@ export default function Landing() {
       <SkyDecor />
 
       <GrassStrip />
+
+      <img className="branch-shows" src={branchImg} alt="" aria-hidden="true" />
 
       {CORNERS.map((c) => (
         <button

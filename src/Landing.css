@@ -69,6 +69,24 @@
 .corner-shows {
   top: calc(2vh + 96px);
   right: 6vw;
+  /* Sits on the branch instead of in its own bordered box. */
+  border: none;
+}
+
+/* The branch the "shows" box rests on. Positioned so the branch's upper
+   surface lines up with the box's bottom edge, growing in from the right
+   screen edge (mirrored so its sturdy/attached end anchors there) and
+   extending left, past the box, like it's rooted just off-screen. */
+.branch-shows {
+  position: absolute;
+  top: calc(2vh + 143px);
+  right: -10px;
+  width: 180px;
+  height: 103px;
+  z-index: 2;
+  transform: scale(1, 1);
+  image-rendering: pixelated;
+  pointer-events: none;
 }
 .corner-streams {
   bottom: calc(6vh + 70px); /* clears the 64px grass-strip, plus a buffer */

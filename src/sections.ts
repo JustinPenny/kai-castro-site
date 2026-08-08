@@ -40,19 +40,19 @@ export const SECTION_CONTENT: Record<
     title: 'Streams',
     body: 'Listen to the latest sets and releases.',
     links: [
-      { label: 'SoundCloud', href: '#' },
-      { label: 'Spotify', href: '#' },
-      { label: 'Apple Music', href: '#' },
-      { label: 'YouTube', href: '#' },
+      { label: 'SoundCloud', href: 'https://soundcloud.com/KaiCastroMusic' },
+      { label: 'Spotify', href: 'https://open.spotify.com/artist/2cYtaNdvkOUrivC6EVRAxL' },
+      { label: 'Beatport', href: 'https://www.beatport.com/artist/kai-castro/650453?a_aid=6871a9eb0c75a' },
+      { label: 'YouTube', href: 'https://www.youtube.com/@kaicastromusic/videos' },
     ],
   },
   socials: {
     title: 'Socials',
     body: 'Follow along.',
     links: [
-      { label: 'Instagram @kaicastro', href: '#' },
-      { label: 'TikTok @kaicastro', href: '#' },
-      { label: 'X @kaicastro', href: '#' },
+      { label: 'Instagram @kaicastromusic', href: 'https://www.instagram.com/kaicastromusic/' },
+      { label: 'TikTok @kaicastromusic', href: 'https://www.tiktok.com/@kaicastromusic' },
+      { label: 'X @KaiCastroMusic', href: 'https://x.com/KaiCastroMusic' },
     ],
   },
 }
