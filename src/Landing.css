@@ -241,8 +241,13 @@
 }
 
 .wordmark-wrap {
+  /* Tagline's bottom edge sits just above the bird's resting spot -- the
+     bird is a 72px sprite centered on the viewport center (50%/50%, with
+     its own -50%/-50% translate), so its top edge is at "50% - 36px";
+     an 8px gap above that puts this wrap's bottom (== its `top` value,
+     since it's translated up by its own full height) at "50% - 44px". */
   position: absolute;
-  top: calc(50% - 80px);
+  top: calc(50% - 44px);
   left: 50%;
   transform: translate(-50%, -100%);
   display: flex;
