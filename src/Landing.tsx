@@ -4,7 +4,10 @@ import SkyDecor from './SkyDecor'
 import GrassStrip from './GrassStrip'
 import { CORNERS, SECTION_CONTENT, type SectionKey } from './sections'
 import { STUMP_CELLS, STUMP_W, STUMP_H } from './stumpFrame'
-import branchImg from './assets/branch.webp'
+import treeImg from './assets/tree.webp'
+import birdBathImg from './assets/bird_bath.webp'
+import lampPostImg from './assets/lamp_post.webp'
+import handImg from './assets/hand.webp'
 import './Landing.css'
 
 const FLIGHT_MS = 700
@@ -129,7 +132,13 @@ export default function Landing() {
 
       <GrassStrip />
 
-      <img className="branch-shows" src={branchImg} alt="" aria-hidden="true" />
+      <img className="tree-shows" src={treeImg} alt="" aria-hidden="true" />
+
+      <img className="lamp-booking" src={lampPostImg} alt="" aria-hidden="true" />
+
+      <img className="birdbath-corner" src={birdBathImg} alt="" aria-hidden="true" />
+
+      <img className="hand-corner" src={handImg} alt="" aria-hidden="true" />
 
       {CORNERS.map((c) => (
         <button
@@ -142,9 +151,11 @@ export default function Landing() {
           onClick={() => goTo(c.key)}
           disabled={flying || panelOpen}
         >
-          <span className="corner-glyph" aria-hidden="true">
-            {c.glyph}
-          </span>
+          <span className="corner-bracket tl" aria-hidden="true" />
+          <span className="corner-bracket tr" aria-hidden="true" />
+          <span className="corner-bracket bl" aria-hidden="true" />
+          <span className="corner-bracket br" aria-hidden="true" />
+          <c.Icon className="corner-glyph" aria-hidden="true" />
           <span className="corner-label">{c.label}</span>
         </button>
       ))}

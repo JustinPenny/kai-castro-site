@@ -6,18 +6,48 @@
   background: var(--paper);
 }
 
+/* Grass strip sitting on the ground between the "streams" and "socials"
+   boxes. left/right are pinned to each box's outer edge plus a gap, so the
+   strip never touches either box; a flex row keeps the trimmed end-cap
+   tiles flush against those edges no matter how much width is between
+   them, with the seamlessly-tileable middle tile repeating to fill the
+   rest (matching how the corner decorations reveal more of themselves on
+   a wider screen instead of stretching). */
 .grass-strip {
   position: absolute;
   bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 64px; /* matches grass.webp's native 64x64 tile size */
+  left: calc(6vw + 150px + 20px);
+  right: calc(6vw + 150px + 20px);
+  height: 64px; /* matches the tile assets' native 64x64 size */
+  display: flex;
+  align-items: flex-end;
+  image-rendering: pixelated;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.grass-cap {
+  flex: none;
+  width: 64px;
+  height: 64px;
+  display: block;
+}
+
+.grass-fill {
+  flex: 1 1 auto;
+  height: 64px;
   background-image: url('./assets/grass.webp');
   background-repeat: repeat-x;
   background-position: left bottom;
   background-size: auto 100%;
-  image-rendering: pixelated;
-  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .grass-strip {
+    /* Matches .corner-node's mobile width override (110px). */
+    left: calc(6vw + 110px + 12px);
+    right: calc(6vw + 110px + 12px);
+  }
 }
 
 .corner-node {
@@ -28,10 +58,10 @@
   align-items: center;
   gap: 6px;
   width: 150px;
-  padding: 14px 8px;
+  padding: 16px 14px;
   background: var(--paper);
   color: var(--ink);
-  border: 3px solid var(--ink);
+  border: none;
   clip-path: polygon(
     10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px),
     calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px), 0 10px
@@ -53,8 +83,9 @@
 }
 
 .corner-glyph {
-  font-size: 22px;
-  line-height: 1;
+  width: 26px;
+  height: 26px;
+  flex: none;
 }
 
 .corner-label {
@@ -69,27 +100,125 @@
 .corner-shows {
   top: calc(2vh + 96px);
   right: 6vw;
-  /* Sits on the branch instead of in its own bordered box. */
-  border: none;
 }
 
-/* The branch the "shows" box rests on. Positioned so the branch's upper
-   surface lines up with the box's bottom edge, growing in from the right
-   screen edge (mirrored so its sturdy/attached end anchors there) and
-   extending left, past the box, like it's rooted just off-screen. */
-.branch-shows {
+/* Small L-shaped corner marks standing in for a full border, just
+   enough to hint at the box's bounds without a full outline. Inset a
+   little so they clear the chamfered corner cut on .corner-node. */
+.corner-bracket {
   position: absolute;
-  top: calc(2vh + 143px);
-  right: -10px;
-  width: 180px;
-  height: 103px;
+  width: 8px;
+  height: 8px;
+  pointer-events: none;
+}
+.corner-bracket.tl {
+  top: 4px;
+  left: 4px;
+  border-top: 2px solid currentColor;
+  border-left: 2px solid currentColor;
+}
+.corner-bracket.tr {
+  top: 4px;
+  right: 4px;
+  border-top: 2px solid currentColor;
+  border-right: 2px solid currentColor;
+}
+.corner-bracket.bl {
+  bottom: 4px;
+  left: 4px;
+  border-bottom: 2px solid currentColor;
+  border-left: 2px solid currentColor;
+}
+.corner-bracket.br {
+  bottom: 4px;
+  right: 4px;
+  border-bottom: 2px solid currentColor;
+  border-right: 2px solid currentColor;
+}
+
+/* The tree the "shows" box rests on. The trunk runs flush along the right
+   screen edge (the source art touches that edge already, so no mirroring
+   or offset is needed) with a branch offshoot higher up now; positioned so
+   that branch's upper surface lines up with the box's bottom edge. */
+.tree-shows {
+  position: absolute;
+  top: calc(2vh + 116px);
+  right: 0;
+  /* Scales with viewport width instead of staying a fixed size, so it
+     doesn't overrun the (also shrinking) corner box on narrow screens.
+     Height follows from the source image's aspect ratio (square, 128x128).
+     10% larger than clamp(110px, 14vw, 180px), then another 10% on top of
+     that. Top offset recalculated each time so the branch's upper surface
+     still lines up with the box's bottom edge at the new scale. */
+  width: clamp(133px, 16.9vw, 218px);
+  aspect-ratio: 1 / 1;
   z-index: 2;
-  transform: scale(1, 1);
   image-rendering: pixelated;
   pointer-events: none;
 }
+/* The lamp post the "booking" box rests on -- same setup as .tree-shows,
+   mirrored to the opposite side. The post runs flush along the left screen
+   edge (the source art touches that edge already, so no mirroring or offset
+   is needed) with its arm reaching right; positioned so the arm's upper
+   surface lines up with the box's bottom edge. */
+.lamp-booking {
+  position: absolute;
+  top: calc(2vh + 150px);
+  left: 0;
+  /* 10% larger than clamp(110px, 14vw, 180px), then another 10% on top of
+     that. Top offset recalculated so the arm's upper surface still lines
+     up with the box's bottom edge at the new scale. */
+  width: clamp(133px, 16.9vw, 218px);
+  aspect-ratio: 1 / 1;
+  z-index: 2;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+/* Decorative birdbath behind the "socials" box -- same "box rests on top"
+   treatment as .tree-shows/.lamp-booking, just bottom-anchored: the box's
+   bottom edge lines up with the top of the basin rim, with the whole bath
+   visible below it instead of the box overlapping into the middle of it. */
+.birdbath-corner {
+  position: absolute;
+  bottom: calc(6vh - 54px);
+  right: 14px;
+  width: clamp(121px, 15.4vw, 198px);
+  aspect-ratio: 1 / 1;
+  z-index: 2;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+/* Decorative pointing hand behind the "streams" box -- mirrored version of
+   .birdbath-corner's treatment: the box's bottom edge lines up with the top
+   of the pointing finger (with its tied string), like the box is perched on
+   the fingertip, mirroring how "shows" rests on the tree's branch. Offset
+   recalculated for the solid-silhouette hand art (finger's top surface sits
+   higher in the frame than the old outline hand's did). */
+.hand-corner {
+  position: absolute;
+  bottom: calc(6vh - 63px);
+  left: 0;
+  width: clamp(121px, 15.4vw, 198px);
+  aspect-ratio: 1 / 1;
+  z-index: 2;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .birdbath-corner {
+    /* At the clamp's minimum width the image is much shorter, so it needs
+       to sit higher (closer to the box) to avoid leaving a gap below it. */
+    bottom: calc(6vh - 6px);
+  }
+  .hand-corner {
+    bottom: calc(6vh - 11px);
+  }
+}
+
 .corner-streams {
-  bottom: calc(6vh + 70px); /* clears the 64px grass-strip, plus a buffer */
+  bottom: calc(6vh + 70px);
   left: 6vw;
 }
 .corner-socials {
@@ -165,6 +294,14 @@
   transform: translate(-50%, -50%);
   z-index: 1;
   image-rendering: pixelated;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Unlike the sun (which stays behind the clouds), the moon passes in front
+   of the star scatter (z-index 2). */
+.sky-body-moon {
+  z-index: 3;
 }
 
 .cloud-scatter,
@@ -267,10 +404,11 @@
 @media (max-width: 640px) {
   .corner-node {
     width: 110px;
-    padding: 10px 6px;
+    padding: 12px 14px;
   }
   .corner-glyph {
-    font-size: 16px;
+    width: 20px;
+    height: 20px;
   }
   .corner-label {
     font-size: 14px;

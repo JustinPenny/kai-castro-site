@@ -196,7 +196,7 @@ export default function SkyDecor() {
   return (
     <div className="sky-strip" ref={stripRef} aria-hidden="true">
       <img
-        className="sky-body"
+        className={body === 'sun' ? 'sky-body' : 'sky-body sky-body-moon'}
         src={body === 'sun' ? SUN_SRC[sunFrame] : MOON_SRC}
         width={body === 'sun' ? SUN_SIZE : MOON_SIZE}
         height={body === 'sun' ? SUN_SIZE : MOON_SIZE}
