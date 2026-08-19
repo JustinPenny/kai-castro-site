@@ -14,9 +14,9 @@ import grassRightImg from './assets/grass_right.webp'
 export default function GrassStrip() {
   return (
     <div className="grass-strip" aria-hidden="true">
-      <img className="grass-cap grass-cap-left" src={grassLeftImg} alt="" />
+      <img className="grass-cap" src={grassLeftImg} alt="" />
       <div className="grass-fill" />
-      <img className="grass-cap grass-cap-right" src={grassRightImg} alt="" />
+      <img className="grass-cap" src={grassRightImg} alt="" />
     </div>
   )
 }

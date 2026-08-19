@@ -1,26 +1,34 @@
 import { useEffect, useRef, useState } from 'react'
 import Bird from './Bird'
+import BirdBurst from './BirdBurst'
+import Confetti from './Confetti'
 import SkyDecor from './SkyDecor'
 import GrassStrip from './GrassStrip'
+import Worm, { type WormHandle } from './Worm'
 import { CORNERS, SECTION_CONTENT, type SectionKey } from './sections'
 import { STUMP_CELLS, STUMP_W, STUMP_H } from './stumpFrame'
+import { useBandsintownShows } from './useBandsintownShows'
+import { formatShowLabel, BANDSINTOWN_ARTIST_URL } from './bandsintown'
 import treeImg from './assets/tree.webp'
-import birdBathImg from './assets/bird_bath.webp'
+import headphonesImg from './assets/headphones.webp'
 import lampPostImg from './assets/lamp_post.webp'
 import handImg from './assets/hand.webp'
 import './Landing.css'
 
 const FLIGHT_MS = 700
-const IDLE_MS = 2000
-// The idle-triggered flight is skipped if the cursor is already within this
-// many px of the bird's current spot -- avoids flying a barely-noticeable
-// short hop when the mouse settles close to where the bird already is.
-const MIN_IDLE_FLIGHT_DISTANCE = 80
 const STUMP_CELL = 6
 // Purely visual nudge so the stump's top surface lines up under the perched
 // bird instead of the bird sitting mid-trunk. Does not affect stump-anchor's
 // measured position, so flight-distance math to the corners stays accurate.
 const STUMP_Y_NUDGE = 48
+
+// Worm minigame: 5% bird growth per worm eaten, celebration (confetti +
+// flash + explode + reset) once growth reaches 50% (i.e. the 10th worm).
+const WORM_GROWTH_STEP = 0.05
+const CELEBRATION_THRESHOLD = 0.5
+const FLOATY_LIFETIME_MS = 1100 // matches the floaty-rise keyframe duration
+const CELEBRATION_FLASH_MS = 400 // how long the white-flash phase runs
+const CELEBRATION_TOTAL_MS = 900 // flash + explode, before the bird resets
 
 function centerOf(el: HTMLElement) {
   const r = el.getBoundingClientRect()
@@ -43,30 +51,86 @@ export default function Landing() {
   const [target, setTarget] = useState<SectionKey | null>(null)
   const [panelOpen, setPanelOpen] = useState(false)
 
+  const { shows, status: showsStatus } = useBandsintownShows()
+
+  const [birdGrowth, setBirdGrowth] = useState(0)
+  const [floatyTexts, setFloatyTexts] = useState<{ id: number; x: number; y: number }[]>([])
+  const [celebrating, setCelebrating] = useState(false)
+  const [birdFlash, setBirdFlash] = useState(false)
+  const [birdExploding, setBirdExploding] = useState(false)
+  const [confettiBurstId, setConfettiBurstId] = useState(0)
+
   const stumpRef = useRef<HTMLDivElement>(null)
   const cornerRefs = useRef<Partial<Record<SectionKey, HTMLButtonElement>>>({})
+  const wormRef = useRef<WormHandle>(null)
   const flightTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  // Mirrors the latest render's state so the delayed idle callback (scheduled
-  // up to 2s ago) can check current flying/panelOpen/birdOffset instead of
-  // stale values.
-  const latest = useRef({ flying, panelOpen, birdOffset })
-  useEffect(() => {
-    latest.current = { flying, panelOpen, birdOffset }
-  })
+  const floatyId = useRef(0)
+  // True while the bird is mid-flight specifically to go eat a worm, so
+  // flyTo can tell a worm-bound flight apart from every other kind (corner
+  // clicks, background clicks) and cancel the worm's "waiting to be eaten"
+  // state if one of those redirects the bird first.
+  const wormFlightPending = useRef(false)
 
   useEffect(() => {
     return () => {
       if (flightTimer.current) clearTimeout(flightTimer.current)
-      if (idleTimer.current) clearTimeout(idleTimer.current)
     }
   }, [])
 
-  function flyTo(x: number, y: number, after?: () => void) {
+  // Once growth hits the celebration threshold, kick off the flash/explode/
+  // reset sequence (see the effect below) -- done as a separate effect
+  // instead of inline in the setState updater so it stays a pure side
+  // effect of state settling, not of the update itself.
+  useEffect(() => {
+    if (birdGrowth >= CELEBRATION_THRESHOLD - 1e-9) {
+      setCelebrating(true)
+    }
+  }, [birdGrowth])
+
+  useEffect(() => {
+    if (!celebrating) return
+    setBirdFlash(true)
+    setConfettiBurstId((n) => n + 1)
+    const toExplode = setTimeout(() => {
+      setBirdFlash(false)
+      setBirdExploding(true)
+    }, CELEBRATION_FLASH_MS)
+    const toReset = setTimeout(() => {
+      setBirdExploding(false)
+      setBirdGrowth(0)
+      setCelebrating(false)
+    }, CELEBRATION_TOTAL_MS)
+    return () => {
+      clearTimeout(toExplode)
+      clearTimeout(toReset)
+    }
+  }, [celebrating])
+
+  // Fires once the bird has actually landed on the worm (see flyTo's
+  // `after` callback in handleWormClick below) -- not at the moment it's
+  // clicked, so the "+1" and growth land right when the bird gets there.
+  function handleWormEaten() {
+    const id = floatyId.current++
+    setFloatyTexts((prev) => [...prev, { id, x: birdOffset.x, y: birdOffset.y }])
+    setTimeout(() => {
+      setFloatyTexts((prev) => prev.filter((f) => f.id !== id))
+    }, FLOATY_LIFETIME_MS)
+
+    setBirdGrowth((prev) => Math.min(prev + WORM_GROWTH_STEP, CELEBRATION_THRESHOLD))
+  }
+
+  function flyTo(x: number, y: number, after?: () => void, isWormFlight = false) {
+    // Any flight that isn't itself heading for the worm supersedes a
+    // pending one -- tell the worm to stop waiting instead of leaving it
+    // stuck in its "about to be eaten" state forever.
+    if (!isWormFlight && wormFlightPending.current) {
+      wormFlightPending.current = false
+      wormRef.current?.cancelPending()
+    }
     if (flightTimer.current) clearTimeout(flightTimer.current)
     setFlying(true)
     setBirdOffset({ x, y })
+    wormFlightPending.current = isWormFlight
     flightTimer.current = setTimeout(() => {
       setFlying(false)
       after?.()
@@ -84,30 +148,32 @@ export default function Landing() {
     flyTo(cornerCenter.x - stumpCenter.x, cornerCenter.y - stumpCenter.y, () => setPanelOpen(true))
   }
 
+  function handleWormClick(point: { x: number; y: number }) {
+    if (flying || panelOpen) return
+    const stumpEl = stumpRef.current
+    if (!stumpEl) return
+    const stumpCenter = centerOf(stumpEl)
+    flyTo(
+      point.x - stumpCenter.x,
+      point.y - stumpCenter.y,
+      () => {
+        // Only actually eat it if this specific worm flight wasn't
+        // superseded (cancelPending already reset wormFlightPending) by
+        // another click before the bird got there.
+        if (wormFlightPending.current) {
+          wormFlightPending.current = false
+          wormRef.current?.triggerEaten()
+          handleWormEaten()
+        }
+      },
+      true,
+    )
+  }
+
   function goHome() {
     if (flying) return
     setPanelOpen(false)
     flyTo(0, 0, () => setTarget(null))
-  }
-
-  // Shared by both the idle-mouse-tracking path and (re)armed after a click,
-  // so a click resets the idle clock instead of leaving a stale timer from
-  // before the click that fires again right after -- which was flying the
-  // bird to the same spot twice in a row.
-  function scheduleIdleFlight(clientX: number, clientY: number) {
-    if (idleTimer.current) clearTimeout(idleTimer.current)
-    idleTimer.current = setTimeout(() => {
-      const { flying: isFlying, panelOpen: isPanelOpen, birdOffset: currentOffset } = latest.current
-      if (isFlying || isPanelOpen) return
-      const stumpEl = stumpRef.current
-      if (!stumpEl) return
-      const stumpCenter = centerOf(stumpEl)
-      const targetX = clientX - stumpCenter.x
-      const targetY = clientY - stumpCenter.y
-      const distance = Math.hypot(targetX - currentOffset.x, targetY - currentOffset.y)
-      if (distance < MIN_IDLE_FLIGHT_DISTANCE) return
-      flyTo(targetX, targetY)
-    }, IDLE_MS)
   }
 
   function handleBackgroundClick(e: React.MouseEvent<HTMLDivElement>) {
@@ -117,26 +183,21 @@ export default function Landing() {
     if (!stumpEl) return
     const stumpCenter = centerOf(stumpEl)
     flyTo(e.clientX - stumpCenter.x, e.clientY - stumpCenter.y)
-    // Re-arm the idle clock from the click position instead of leaving
-    // whatever was pending from before the click.
-    scheduleIdleFlight(e.clientX, e.clientY)
-  }
-
-  function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
-    scheduleIdleFlight(e.clientX, e.clientY)
   }
 
   return (
-    <div className="landing" onClick={handleBackgroundClick} onMouseMove={handleMouseMove}>
+    <div className="landing" onClick={handleBackgroundClick}>
       <SkyDecor />
 
       <GrassStrip />
+
+      <Worm ref={wormRef} onWormClick={handleWormClick} />
 
       <img className="tree-shows" src={treeImg} alt="" aria-hidden="true" />
 
       <img className="lamp-booking" src={lampPostImg} alt="" aria-hidden="true" />
 
-      <img className="birdbath-corner" src={birdBathImg} alt="" aria-hidden="true" />
+      <img className="headphones-corner" src={headphonesImg} alt="" aria-hidden="true" />
 
       <img className="hand-corner" src={handImg} alt="" aria-hidden="true" />
 
@@ -177,7 +238,31 @@ export default function Landing() {
         />
       </div>
 
-      <Bird flying={flying} offsetX={birdOffset.x} offsetY={birdOffset.y} durationMs={FLIGHT_MS} />
+      {birdExploding ? (
+        <BirdBurst offsetX={birdOffset.x} offsetY={birdOffset.y} />
+      ) : (
+        <Bird
+          flying={flying}
+          offsetX={birdOffset.x}
+          offsetY={birdOffset.y}
+          durationMs={FLIGHT_MS}
+          growthScale={1 + birdGrowth}
+          flashing={birdFlash}
+        />
+      )}
+
+      {floatyTexts.map((f) => (
+        <span
+          key={f.id}
+          className="floaty-plus-one"
+          style={{ translate: `calc(-50% + ${f.x}px) calc(-50% + ${f.y}px)` }}
+          aria-hidden="true"
+        >
+          +1
+        </span>
+      ))}
+
+      <Confetti burstId={confettiBurstId} />
 
       {target && (
         <div className={`section-panel ${panelOpen ? 'is-open' : ''}`}>
@@ -185,14 +270,34 @@ export default function Landing() {
             &lt; back to stump
           </button>
           <h1 className="panel-title">{SECTION_CONTENT[target].title}</h1>
-          <p className="panel-body">{SECTION_CONTENT[target].body}</p>
-          <ul className="panel-links">
-            {SECTION_CONTENT[target].links.map((l) => (
-              <li key={l.label}>
-                <a href={l.href}>{l.label}</a>
-              </li>
-            ))}
-          </ul>
+          {SECTION_CONTENT[target].body && <p className="panel-body">{SECTION_CONTENT[target].body}</p>}
+          {target === 'shows' ? (
+            <ul className="panel-links">
+              {showsStatus === 'loading' && <li className="panel-status">Loading dates...</li>}
+              {showsStatus === 'error' && (
+                <li>
+                  <a href={BANDSINTOWN_ARTIST_URL}>See dates on Bandsintown</a>
+                </li>
+              )}
+              {showsStatus === 'ready' && shows.length === 0 && (
+                <li className="panel-status">No shows booked right now -- check back soon.</li>
+              )}
+              {showsStatus === 'ready' &&
+                shows.map((show) => (
+                  <li key={show.id}>
+                    <a href={show.url}>{formatShowLabel(show)}</a>
+                  </li>
+                ))}
+            </ul>
+          ) : (
+            <ul className="panel-links">
+              {SECTION_CONTENT[target].links.map((l) => (
+                <li key={l.label}>
+                  <a href={l.href}>{l.label}</a>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
     </div>

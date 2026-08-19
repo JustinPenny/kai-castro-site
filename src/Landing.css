@@ -50,6 +50,53 @@
   }
 }
 
+/* Worm minigame -- see Worm.tsx. Spawns in the open white space around the
+   stump (never in the grass or over any other art), plays its rise-out-of
+   -the-ground frames once, then holds on the last two frames (looping)
+   until clicked. `left`/`top` are JS-driven viewport px from Worm.tsx;
+   `translate` (a separate, static property) nudges the box so its bottom
+   -center -- where the worm meets the ground in every frame -- lands
+   exactly on that point, instead of the box's default top-left corner. */
+.worm {
+  position: absolute;
+  translate: -50% -100%;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  z-index: 4;
+  transition: transform 150ms ease-in, opacity 150ms ease-in;
+}
+
+.worm-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+.worm-eaten {
+  transform: scale(0.4);
+  opacity: 0;
+}
+
+/* Nudge that shows up once a worm has sat there un-clicked for a while --
+   see Worm.tsx's PROMPT_DELAY_MS. Centered above the sprite. */
+.worm-prompt {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  translate: -50% -4px;
+  white-space: nowrap;
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  color: var(--ink);
+  pointer-events: none;
+}
+
 .corner-node {
   position: absolute;
   z-index: 3;
@@ -174,13 +221,14 @@
   image-rendering: pixelated;
   pointer-events: none;
 }
-/* Decorative birdbath behind the "socials" box -- same "box rests on top"
+/* Decorative headphones behind the "socials" box -- same "box rests on top"
    treatment as .tree-shows/.lamp-booking, just bottom-anchored: the box's
-   bottom edge lines up with the top of the basin rim, with the whole bath
-   visible below it instead of the box overlapping into the middle of it. */
-.birdbath-corner {
+   bottom edge lines up with the top of the headband, like the box is
+   perched on it, with the rest of the headphones visible below instead of
+   the box overlapping into the middle of it. */
+.headphones-corner {
   position: absolute;
-  bottom: calc(6vh - 54px);
+  bottom: calc(6vh - 109px);
   right: 14px;
   width: clamp(121px, 15.4vw, 198px);
   aspect-ratio: 1 / 1;
@@ -190,7 +238,7 @@
 }
 
 /* Decorative pointing hand behind the "streams" box -- mirrored version of
-   .birdbath-corner's treatment: the box's bottom edge lines up with the top
+   .headphones-corner's treatment: the box's bottom edge lines up with the top
    of the pointing finger (with its tied string), like the box is perched on
    the fingertip, mirroring how "shows" rests on the tree's branch. Offset
    recalculated for the solid-silhouette hand art (finger's top surface sits
@@ -207,10 +255,10 @@
 }
 
 @media (max-width: 640px) {
-  .birdbath-corner {
+  .headphones-corner {
     /* At the clamp's minimum width the image is much shorter, so it needs
        to sit higher (closer to the box) to avoid leaving a gap below it. */
-    bottom: calc(6vh - 6px);
+    bottom: calc(6vh - 40px);
   }
   .hand-corner {
     bottom: calc(6vh - 11px);
@@ -291,6 +339,121 @@
   z-index: 5;
   pointer-events: none;
   image-rendering: pixelated;
+}
+
+/* Brief white flicker at the top of the worm-eating celebration, right
+   before the bird explodes -- `invert` flips the dark line-art to a bright
+   flash rather than relying on `brightness` (which can't lighten pixels
+   that start at pure black). `steps(1)` gives a hard flicker instead of a
+   smooth fade, matching the pixel-art feel. */
+.bird-flash {
+  animation: bird-flash 0.4s steps(1) 1;
+}
+
+@keyframes bird-flash {
+  0%,
+  100% {
+    filter: none;
+  }
+  25%,
+  75% {
+    filter: invert(1) brightness(2) drop-shadow(0 0 10px #fff);
+  }
+  50% {
+    filter: none;
+  }
+}
+
+/* Puff of pixels standing in for the bird "exploding" -- see BirdBurst.tsx.
+   Positioned the same way as .bird (50%/50% anchor + translate). */
+.bird-burst {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 6;
+  pointer-events: none;
+}
+
+.bird-burst-piece {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 6px;
+  height: 6px;
+  background: var(--ink);
+  animation: bird-burst-fly 0.5s ease-out forwards;
+}
+
+@keyframes bird-burst-fly {
+  0% {
+    transform: translate(-50%, -50%) translate(0, 0);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) translate(var(--dx), var(--dy));
+    opacity: 0;
+  }
+}
+
+/* "+1" that floats up from the bird's current spot and fades out when a
+   worm is eaten -- see Landing.tsx `floatyTexts`. Positioned the same way
+   as .bird (50%/50% anchor + JS-driven `translate`), with the rise/fade
+   animated on the independent `transform` property so it composites with
+   that translate instead of fighting it. */
+.floaty-plus-one {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 6;
+  font-family: var(--font-pixel);
+  font-size: 16px;
+  color: var(--ink);
+  pointer-events: none;
+  animation: floaty-rise 1.1s ease-out forwards;
+}
+
+@keyframes floaty-rise {
+  0% {
+    transform: translate(-50%, -50%) translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) translateY(-56px);
+    opacity: 0;
+  }
+}
+
+/* Confetti burst for reaching the celebration threshold -- see
+   Confetti.tsx. Pieces fall the full viewport height and are cleared once
+   the last one lands. */
+.confetti-field {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.confetti-piece {
+  position: absolute;
+  top: -20px;
+  width: 8px;
+  height: 8px;
+  animation-name: confetti-fall;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+  image-rendering: pixelated;
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(0) rotate(var(--start-rotate, 0deg));
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh) rotate(calc(var(--start-rotate, 0deg) + 360deg));
+    opacity: 0.9;
+  }
 }
 
 .sky-body {
@@ -404,6 +567,15 @@
 .panel-links a:hover {
   background: var(--ink);
   color: var(--paper);
+}
+
+/* Non-link state inside .panel-links (loading / empty Bandsintown states) --
+   same sizing as .panel-links a, minus the link treatment. */
+.panel-status {
+  font-family: var(--font-pixel);
+  font-size: 12px;
+  color: var(--ink);
+  opacity: 0.6;
 }
 
 @media (max-width: 640px) {

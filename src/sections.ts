@@ -26,18 +26,17 @@ export const SECTION_CONTENT: Record<
     title: 'Booking',
     body: 'For gigs, private events, and press inquiries, reach out below.',
     links: [
-      { label: 'booking@kaicastro.com', href: 'mailto:booking@kaicastro.com' },
+      { label: 'kai@kaicastro.com', href: 'mailto:kai@kaicastro.com' },
       { label: 'Press kit', href: '#' },
     ],
   },
   shows: {
     title: 'Shows',
-    body: 'Placeholder dates -- swap in the real tour schedule.',
-    links: [
-      { label: 'Fri Mar 14 -- Warehouse, Brooklyn NY', href: '#' },
-      { label: 'Sat Apr 05 -- The Lot, Austin TX', href: '#' },
-      { label: 'Fri May 02 -- Sunset Terrace, LA', href: '#' },
-    ],
+    body: '',
+    // Populated at render time from the Bandsintown API instead of listed
+    // here -- see useBandsintownShows.ts / Landing.tsx. Left empty so the
+    // SECTION_CONTENT shape stays uniform across all four sections.
+    links: [],
   },
   streams: {
     title: 'Streams',
@@ -55,7 +54,6 @@ export const SECTION_CONTENT: Record<
     links: [
       { label: 'Instagram @kaicastromusic', href: 'https://www.instagram.com/kaicastromusic/' },
       { label: 'TikTok @kaicastromusic', href: 'https://www.tiktok.com/@kaicastromusic' },
-      { label: 'X @KaiCastroMusic', href: 'https://x.com/KaiCastroMusic' },
     ],
   },
 }
