@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import Landing from './Landing'
 import './Device.css'
-import feedIcon from './assets/icon_feed.webp'
-import bathroomIcon from './assets/icon_bathroom.webp'
-import sleepIcon from './assets/icon_sleep.webp'
-import playIcon from './assets/icon_play.webp'
+import feedIcon from './assets/food_icon.webp'
+import bathroomIcon from './assets/potty_icon.webp'
+import sleepIcon from './assets/sleep_icon.webp'
+import playIcon from './assets/play_icon.webp'
 
 // Duotone-style 4-tone LCD palette (darkest -> lightest), applied as an
 // SVG filter to `.landing` (see Landing.css): everything on screen is
@@ -24,6 +24,8 @@ const DEVICE_BUTTONS = [
 
 function App() {
   const [feedTick, setFeedTick] = useState(0)
+  const [pottyTick, setPottyTick] = useState(0)
+  const [sleepTick, setSleepTick] = useState(0)
   return (
     <>
       <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true" focusable="false">
@@ -48,7 +50,7 @@ function App() {
           </header>
           <div className="device-bezel">
             <div className="device-screen">
-              <Landing feedTick={feedTick} />
+              <Landing feedTick={feedTick} pottyTick={pottyTick} sleepTick={sleepTick} />
               {/* Unfiltered on purpose: the pixel grid and glass shading
                   sit on top of the palette, not inside it. */}
               <div className="lcd-overlay" aria-hidden="true" />
@@ -57,7 +59,15 @@ function App() {
           <div className="device-buttons">
             {DEVICE_BUTTONS.map(({ label, icon }) => (
               <button key={label} type="button" className="device-button" aria-label={label}
-                onClick={label === 'Feed' ? () => setFeedTick((t) => t + 1) : undefined}
+                onClick={
+                  label === 'Feed'
+                    ? () => setFeedTick((t) => t + 1)
+                    : label === 'Bathroom'
+                      ? () => setPottyTick((t) => t + 1)
+                      : label === 'Sleep'
+                        ? () => setSleepTick((t) => t + 1)
+                        : undefined
+                }
               >
                 <span className="device-button-cap">
                   <img className="device-button-icon" src={icon} alt="" />

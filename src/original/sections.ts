@@ -1,0 +1,59 @@
+import type { ComponentType, SVGProps } from 'react'
+import { BookingIcon, ShowsIcon, StreamsIcon, SocialsIcon } from './icons'
+
+export type SectionKey = 'booking' | 'shows' | 'streams' | 'socials'
+
+export interface CornerDef {
+  key: SectionKey
+  label: string
+  Icon: ComponentType<SVGProps<SVGSVGElement>>
+}
+
+// NOTE: placeholder content throughout -- swap in the real details.
+// Flight offsets are measured live from the DOM (see Landing.tsx), not hardcoded here.
+export const CORNERS: CornerDef[] = [
+  { key: 'booking', label: 'Booking', Icon: BookingIcon },
+  { key: 'shows', label: 'Shows', Icon: ShowsIcon },
+  { key: 'streams', label: 'Streams', Icon: StreamsIcon },
+  { key: 'socials', label: 'Socials', Icon: SocialsIcon },
+]
+
+export const SECTION_CONTENT: Record<
+  SectionKey,
+  { title: string; body: string; links: { label: string; href: string }[] }
+> = {
+  booking: {
+    title: 'Booking',
+    body: 'For gigs, private events, and press inquiries, reach out below.',
+    links: [
+      { label: 'kai@kaicastro.com', href: 'mailto:kai@kaicastro.com' },
+      { label: 'Press kit', href: '#' },
+    ],
+  },
+  shows: {
+    title: 'Shows',
+    body: '',
+    // Populated at render time from the Bandsintown API instead of listed
+    // here -- see useBandsintownShows.ts / Landing.tsx. Left empty so the
+    // SECTION_CONTENT shape stays uniform across all four sections.
+    links: [],
+  },
+  streams: {
+    title: 'Streams',
+    body: 'Listen to the latest sets and releases.',
+    links: [
+      { label: 'SoundCloud', href: 'https://soundcloud.com/KaiCastroMusic' },
+      { label: 'Spotify', href: 'https://open.spotify.com/artist/2cYtaNdvkOUrivC6EVRAxL' },
+      { label: 'Beatport', href: 'https://www.beatport.com/artist/kai-castro/650453?a_aid=6871a9eb0c75a' },
+      { label: 'YouTube', href: 'https://www.youtube.com/@kaicastromusic/videos' },
+    ],
+  },
+  socials: {
+    title: 'Socials',
+    body: 'Follow along.',
+    links: [
+      { label: 'Instagram @kaicastromusic', href: 'https://www.instagram.com/kaicastromusic/' },
+      { label: 'TikTok @kaicastromusic', href: 'https://www.tiktok.com/@kaicastromusic' },
+    ],
+  },
+}
