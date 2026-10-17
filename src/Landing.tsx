@@ -9,6 +9,9 @@ const FLIGHT_MS = 700
 // Food: a little pellet (1/16 of the buddy sprite) dropped near the buddy.
 const FOOD_DROP_MS = 400
 const EAT_FRAME_MS = 400
+const POTTY_FRAME_MS = 700
+const SLEEP_FRAME_MS = 700
+const SLEEP_SEQUENCE = [1, 2, 3, 4, 5, 4, 5, 4, 3, 2, 1]
 const MIN_FOOD = 1
 const MAX_FOOD = 3
 // Where the beak sits relative to the sprite center (sprite faces right).
@@ -28,13 +31,23 @@ function centerOf(el: HTMLElement) {
   return { x: r.left + r.width / 2, y: r.top + r.height / 2 }
 }
 
-export default function Landing({ feedTick = 0 }: { feedTick?: number }) {
+export default function Landing({
+  feedTick = 0,
+  pottyTick = 0,
+  sleepTick = 0,
+}: {
+  feedTick?: number
+  pottyTick?: number
+  sleepTick?: number
+}) {
   const [birdOffset, setBirdOffset] = useState({ x: 0, y: 0 })
   const [flying, setFlying] = useState(false)
   const [target, setTarget] = useState<SectionKey | null>(null)
   const [panelOpen, setPanelOpen] = useState(false)
   const [foods, setFoods] = useState<Food[]>([])
   const [eatFrame, setEatFrame] = useState<0 | 1 | 2>(0)
+  const [sleepFrame, setSleepFrame] = useState(0)
+  const [pottyFrame, setPottyFrame] = useState<0 | 1 | 2 | 3>(0)
   const [feeding, setFeeding] = useState(false)
 
   const { shows, status: showsStatus } = useBandsintownShows()
@@ -67,6 +80,16 @@ export default function Landing({ feedTick = 0 }: { feedTick?: number }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [feedTick])
 
+  useEffect(() => {
+    if (pottyTick > 0) void startPotty()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pottyTick])
+
+  useEffect(() => {
+    if (sleepTick > 0) void startSleep()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sleepTick])
+
   function flyTo(x: number, y: number, after?: () => void) {
     if (flightTimer.current) clearTimeout(flightTimer.current)
     setFlying(true)
@@ -86,6 +109,36 @@ export default function Landing({ feedTick = 0 }: { feedTick?: number }) {
 
   // Drop 1-3 pellets near the buddy, then have it walk to each and eat it
   // (eat pose 1, then 2).
+  // Nap: fall asleep (1-5), stir (4, 5, 4, 5), wake up (4-1), then idle.
+  async function startSleep() {
+    if (feedingRef.current || panelRef.current || flying) return
+    feedingRef.current = true
+    setFeeding(true)
+    for (const frame of SLEEP_SEQUENCE) {
+      if (!alive.current) return
+      setSleepFrame(frame)
+      await wait(SLEEP_FRAME_MS)
+    }
+    setSleepFrame(0)
+    feedingRef.current = false
+    setFeeding(false)
+  }
+
+  // Potty break: pose 1, 2, 3, then back to idle.
+  async function startPotty() {
+    if (feedingRef.current || panelRef.current || flying) return
+    feedingRef.current = true
+    setFeeding(true)
+    for (const frame of [1, 2, 3] as const) {
+      if (!alive.current) return
+      setPottyFrame(frame)
+      await wait(POTTY_FRAME_MS)
+    }
+    setPottyFrame(0)
+    feedingRef.current = false
+    setFeeding(false)
+  }
+
   async function feed() {
     if (feedingRef.current || panelRef.current || false) return
     const el = landingRef.current
@@ -192,7 +245,7 @@ export default function Landing({ feedTick = 0 }: { feedTick?: number }) {
         </div>
       ))}
 
-      <Bird eatFrame={eatFrame} flying={flying} offsetX={birdOffset.x} offsetY={birdOffset.y} durationMs={FLIGHT_MS} />
+      <Bird eatFrame={eatFrame} pottyFrame={pottyFrame} sleepFrame={sleepFrame} flying={flying} offsetX={birdOffset.x} offsetY={birdOffset.y} durationMs={FLIGHT_MS} />
 
       {target && (
         <div className={`section-panel ${panelOpen ? 'is-open' : ''}`}>

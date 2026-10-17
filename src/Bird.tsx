@@ -5,7 +5,18 @@ import buddyBlink from './assets/buddy_idle_blink.webp'
 import buddyBeak from './assets/buddy_beak.webp'
 import buddyFlap from './assets/buddy_flap.webp'
 import buddyEat1 from './assets/buddy_eat_1.webp'
+import buddyPotty1 from './assets/buddy_potty_1.webp'
+import buddyPotty2 from './assets/buddy_potty_2.webp'
+import buddyPotty3 from './assets/buddy_potty_3.webp'
 import buddyEat2 from './assets/buddy_eat_2.webp'
+
+// Sleep poses, buddy_sleep_1..5. Loaded by glob so a pose that hasn't been
+// added yet falls back to the head-down idle pose instead of breaking.
+const sleepModules = import.meta.glob('./assets/buddy_sleep_*.webp', {
+  eager: true,
+  import: 'default',
+}) as Record<string, string>
+const sleepPose = (n: number) => sleepModules[`./assets/buddy_sleep_${n}.webp`] ?? buddyDown
 
 // On-screen size of the buddy at growth 1 (the art is 128x128 pixels).
 const SIZE = 160
@@ -26,6 +37,10 @@ interface BirdProps {
   durationMs: number
   // 0 = not eating; 1 / 2 = which eat pose to show.
   eatFrame?: 0 | 1 | 2
+  // 0 = not on the potty; 1 / 2 / 3 = which potty pose to show.
+  pottyFrame?: 0 | 1 | 2 | 3
+  // 0 = awake; 1-5 = which sleep pose to show.
+  sleepFrame?: number
 }
 
 export default function Bird({
@@ -34,6 +49,8 @@ export default function Bird({
   offsetY,
   durationMs,
   eatFrame = 0,
+  pottyFrame = 0,
+  sleepFrame = 0,
 }: BirdProps) {
   const [facingLeft, setFacingLeft] = useState(false)
   // Counts bob poses (even = up, odd = down); only advances while idle, so
@@ -67,7 +84,11 @@ export default function Bird({
   const bobNumber = Math.floor(bobTick / 2) + 1 // 1-based
   const isDown = bobTick % 2 === 1
   let src = buddyIdle
-  if (eatFrame) {
+  if (sleepFrame) {
+    src = sleepPose(sleepFrame)
+  } else if (pottyFrame) {
+    src = pottyFrame === 1 ? buddyPotty1 : pottyFrame === 2 ? buddyPotty2 : buddyPotty3
+  } else if (eatFrame) {
     src = eatFrame === 1 ? buddyEat1 : buddyEat2
   } else if (flying) {
     src = flapUp ? buddyFlap : buddyIdle
