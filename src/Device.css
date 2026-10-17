@@ -1,0 +1,205 @@
+/* Handheld "virtual pet" shell around the whole app: blue plastic
+   body, the "Kai Castro" logo where a Tamagotchi would print its own name,
+   a dark bezel with the LCD window (which holds <Landing/>), and three
+   buttons underneath. Sizing is all in terms of the device itself
+   (container units), so the shell scales as one piece. */
+
+.device-stage {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  /* Laptop/desktop: the shell floats centered on a neutral grey. */
+  background: #8e9196;
+}
+
+/* Fixed-width, mobile-first. The shell is at most 430px wide and fills the
+   whole viewport on a phone (edge to edge, square corners, no backdrop
+   showing anywhere); everything inside is sized in container units of the
+   shell, so the layout is identical at every size it renders at. */
+.device {
+  width: min(100vw, 430px);
+  height: 100svh;
+  height: 100dvh;
+  container-type: size;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1.2cqh;
+  padding: 1.4cqh 1.8cqw 1.4cqh;
+  background:
+    radial-gradient(ellipse at 30% 8%, rgba(255, 255, 255, 0.5), transparent 40%),
+    linear-gradient(160deg, #7fb8ff 0%, #3f86e8 55%, #2656b8 100%);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35);
+}
+
+/* Anything wider than a phone: a centered handheld with rounded corners,
+   a margin of grey around it, and a drop shadow. */
+@media (min-width: 520px) {
+  .device {
+    height: min(calc(100svh - 48px), 880px);
+    height: min(calc(100dvh - 48px), 880px);
+    border-radius: 32px;
+    box-shadow:
+      inset 0 0 0 2px rgba(255, 255, 255, 0.35),
+      inset 0 -10px 24px rgba(10, 30, 100, 0.4),
+      0 0 0 2px #17398a,
+      0 18px 40px rgba(0, 0, 0, 0.35);
+  }
+}
+
+/* Phones: if the browser ever overscrolls/rubber-bands, show shell blue
+   rather than grey. */
+@media (max-width: 519px) {
+  html,
+  body {
+    background: #2656b8;
+  }
+}
+
+/* The device's printed name -- "Kai Castro" in the spot where a real
+   Tamagotchi shows its logo. */
+.device-brand {
+  --wordmark-size: clamp(16px, 4cqw, 40px);
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.8em;
+  text-align: center;
+}
+
+/* Narrow (phone) devices: stack the tagline under the name instead. */
+@container (max-width: 640px) {
+  .device-brand {
+    --wordmark-size: clamp(18px, 6cqw, 30px);
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35em;
+  }
+}
+
+.wordmark {
+  margin: 0;
+  font-family: var(--font-pixel);
+  font-size: var(--wordmark-size);
+  letter-spacing: 0.04em;
+  color: #fff;
+  /* "Kai Castro" must always read as one line. */
+  white-space: nowrap;
+  -webkit-text-stroke: 3px #14367a;
+  paint-order: stroke fill;
+  text-shadow: 0 3px 0 #14367a;
+}
+
+.tagline {
+  margin: 0;
+  font-family: var(--font-pixel);
+  /* Exactly half the wordmark, so the two scale in lockstep. */
+  font-size: calc(var(--wordmark-size) * 0.5);
+  color: #14367a;
+  white-space: nowrap;
+}
+
+.device-bezel {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  padding: min(1.6cqw, 1.8cqh);
+  border-radius: min(4cqw, 5cqh);
+  background: linear-gradient(160deg, #4a5160, #2a2f3a);
+  box-shadow:
+    inset 0 3px 8px rgba(0, 0, 0, 0.7),
+    0 2px 0 rgba(255, 255, 255, 0.35);
+}
+
+.device-screen {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  border-radius: min(2.4cqw, 3cqh);
+  overflow: hidden;
+  background: #c8d4a0;
+}
+
+.device-screen > .landing {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+}
+
+/* LCD glass on top of the (filtered) screen: a fine pixel grid, faint
+   scanlines, a soft glare, and an inner shadow where the glass meets the
+   bezel. pointer-events:none so it never blocks a click, and outside the
+   palette filter so the grid stays a subtle darkening rather than getting
+   posterized into the palette. */
+.lcd-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0 18%, transparent 18%),
+    linear-gradient(to right, rgba(20, 28, 10, 0.1) 1px, transparent 1px) 0 0 / 3px 3px,
+    linear-gradient(to bottom, rgba(20, 28, 10, 0.1) 1px, transparent 1px) 0 0 / 3px 3px,
+    repeating-linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 0 2px, transparent 2px 4px);
+  box-shadow:
+    inset 0 0 30px 4px rgba(20, 28, 10, 0.35),
+    inset 0 0 5px 2px rgba(20, 28, 10, 0.5);
+}
+
+/* Four labeled buttons under the screen, spaced evenly across the width
+   (no actions wired up yet). */
+.device-buttons {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: space-evenly;
+  align-items: flex-start;
+  height: clamp(76px, 13cqh, 118px);
+  padding-top: 0.8cqh;
+}
+
+.device-button {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7cqh;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: var(--font-pixel);
+}
+
+.device-button-cap {
+  --size: min(19cqw, 10cqh);
+  display: grid;
+  place-items: center;
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #f2f8ff, #9cc4ff 55%, #3a74d6);
+  box-shadow:
+    0 3px 0 #17398a,
+    0 5px 8px rgba(5, 20, 80, 0.45),
+    inset 0 -3px 5px rgba(20, 60, 160, 0.4);
+}
+
+.device-button:active .device-button-cap {
+  transform: translateY(3px);
+  box-shadow:
+    0 0 0 #17398a,
+    inset 0 -3px 5px rgba(20, 60, 160, 0.4);
+}
+
+.device-button-icon {
+  width: 62%;
+  height: 62%;
+  image-rendering: pixelated;
+  pointer-events: none;
+}

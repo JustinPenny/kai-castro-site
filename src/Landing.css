@@ -1,111 +1,43 @@
 .landing {
   position: relative;
-  width: 100vw;
-  height: 100svh;
-  overflow: hidden;
-  background: var(--paper);
-}
-
-/* Grass strip sitting on the ground between the "streams" and "socials"
-   boxes. left/right are pinned to each box's outer edge plus a gap, so the
-   strip never touches either box; a flex row keeps the trimmed end-cap
-   tiles flush against those edges no matter how much width is between
-   them, with the seamlessly-tileable middle tile repeating to fill the
-   rest (matching how the corner decorations reveal more of themselves on
-   a wider screen instead of stretching). */
-.grass-strip {
-  position: absolute;
-  bottom: 0;
-  left: calc(6vw + 150px + 20px);
-  right: calc(6vw + 150px + 20px);
-  height: 64px; /* matches the tile assets' native 64x64 size */
-  display: flex;
-  align-items: flex-end;
-  image-rendering: pixelated;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.grass-cap {
-  flex: none;
-  width: 64px;
-  height: 64px;
-  display: block;
-}
-
-.grass-fill {
-  flex: 1 1 auto;
-  height: 64px;
-  background-image: url('./assets/grass.webp');
-  background-repeat: repeat-x;
-  background-position: left bottom;
-  background-size: auto 100%;
-}
-
-@media (max-width: 640px) {
-  .grass-strip {
-    /* Matches .corner-node's mobile width override (110px). */
-    left: calc(6vw + 110px + 12px);
-    right: calc(6vw + 110px + 12px);
-  }
-}
-
-/* Worm minigame -- see Worm.tsx. Spawns in the open white space around the
-   stump (never in the grass or over any other art), plays its rise-out-of
-   -the-ground frames once, then holds on the last two frames (looping)
-   until clicked. `left`/`top` are JS-driven viewport px from Worm.tsx;
-   `translate` (a separate, static property) nudges the box so its bottom
-   -center -- where the worm meets the ground in every frame -- lands
-   exactly on that point, instead of the box's default top-left corner. */
-.worm {
-  position: absolute;
-  translate: -50% -100%;
-  width: 56px;
-  height: 56px;
-  padding: 0;
-  border: none;
-  background: none;
-  cursor: pointer;
-  z-index: 4;
-  transition: transform 150ms ease-in, opacity 150ms ease-in;
-}
-
-.worm-frame {
-  display: block;
+  /* Fills the LCD window of the device shell (see Device.css). It's a size
+     container so every vw/vh-style measurement below is written in cqw/cqh
+     -- percentages of THIS screen, not of the browser window -- which keeps
+     the whole layout self-consistent at whatever size the screen ends up. */
   width: 100%;
   height: 100%;
-  image-rendering: pixelated;
-  pointer-events: none;
+  container-type: size;
+  overflow: hidden;
+  background: var(--paper);
+  /* Handheld-LCD palette: see the <filter id="lcd-palette"> in App.tsx.
+     Collapses everything (CSS colors and every image alike) into four
+     olive-gray tones. */
+  filter: url(#lcd-palette);
 }
 
-.worm-eaten {
-  transform: scale(0.4);
-  opacity: 0;
-}
-
-/* Nudge that shows up once a worm has sat there un-clicked for a while --
-   see Worm.tsx's PROMPT_DELAY_MS. Centered above the sprite. */
-.worm-prompt {
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  translate: -50% -4px;
-  white-space: nowrap;
-  font-family: var(--font-pixel);
-  font-size: 8px;
-  color: var(--ink);
-  pointer-events: none;
-}
-
-.corner-node {
+/* Each corner's label button sits in its own positioned wrapper. */
+.corner-group {
   position: absolute;
   z-index: 3;
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 10px;
+}
+
+.corner-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 6px;
-  width: 150px;
-  padding: 16px 14px;
+  /* Sized to content instead of a fixed width -- at the larger label
+     font-size, the longer labels ("Streams", "Socials") no longer
+     reliably fit a fixed 150px box, and any overflow gets hard-clipped
+     by the chamfered clip-path below instead of just wrapping. min-width
+     keeps the shorter labels ("Shows", "Booking") visually consistent. */
+  width: max-content;
+  min-width: 150px;
+  padding: 16px 18px;
   background: var(--paper);
   color: var(--ink);
   border: none;
@@ -115,7 +47,7 @@
   );
   font-family: var(--font-pixel);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, transform 0.15s;
+  transition: background 0.15s steps(1, end), color 0.15s steps(1, end), transform 0.15s steps(1, end);
 }
 
 .corner-node:hover:not(:disabled) {
@@ -124,154 +56,48 @@
   transform: scale(1.04);
 }
 
+/* No fade while disabled (e.g. mid-flight) -- the label stays fully
+   visible; it just stops reacting to hover/clicks. */
 .corner-node:disabled {
   cursor: default;
-  opacity: 0.45;
-}
-
-.corner-glyph {
-  width: 26px;
-  height: 26px;
-  flex: none;
 }
 
 .corner-label {
-  font-size: 18px;
+  font-size: 26px;
   letter-spacing: 0.05em;
+  color: #fff;
+  /* Outline via layered shadows (works everywhere) plus text-stroke
+     (crisper where supported) -- belt and suspenders so the white fill
+     stays legible against the paper-colored box behind it. */
+  text-shadow:
+    -2px -2px 0 var(--ink),
+    2px -2px 0 var(--ink),
+    -2px 2px 0 var(--ink),
+    2px 2px 0 var(--ink),
+    0 -2px 0 var(--ink),
+    0 2px 0 var(--ink),
+    -2px 0 0 var(--ink),
+    2px 0 0 var(--ink);
+  -webkit-text-stroke: 2px var(--ink);
+  paint-order: stroke fill;
 }
 
+/* Tucked into the four corners of the screen. */
 .corner-booking {
-  top: calc(2vh + 96px);
-  left: 6vw;
+  top: 4cqh;
+  left: 4.5cqw;
 }
 .corner-shows {
-  top: calc(2vh + 96px);
-  right: 6vw;
+  top: 4cqh;
+  right: 4.5cqw;
 }
-
-/* Small L-shaped corner marks standing in for a full border, just
-   enough to hint at the box's bounds without a full outline. Inset a
-   little so they clear the chamfered corner cut on .corner-node. */
-.corner-bracket {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  pointer-events: none;
-}
-.corner-bracket.tl {
-  top: 4px;
-  left: 4px;
-  border-top: 2px solid currentColor;
-  border-left: 2px solid currentColor;
-}
-.corner-bracket.tr {
-  top: 4px;
-  right: 4px;
-  border-top: 2px solid currentColor;
-  border-right: 2px solid currentColor;
-}
-.corner-bracket.bl {
-  bottom: 4px;
-  left: 4px;
-  border-bottom: 2px solid currentColor;
-  border-left: 2px solid currentColor;
-}
-.corner-bracket.br {
-  bottom: 4px;
-  right: 4px;
-  border-bottom: 2px solid currentColor;
-  border-right: 2px solid currentColor;
-}
-
-/* The tree the "shows" box rests on. The trunk runs flush along the right
-   screen edge (the source art touches that edge already, so no mirroring
-   or offset is needed) with a branch offshoot higher up now; positioned so
-   that branch's upper surface lines up with the box's bottom edge. */
-.tree-shows {
-  position: absolute;
-  top: calc(2vh + 116px);
-  right: 0;
-  /* Scales with viewport width instead of staying a fixed size, so it
-     doesn't overrun the (also shrinking) corner box on narrow screens.
-     Height follows from the source image's aspect ratio (square, 128x128).
-     10% larger than clamp(110px, 14vw, 180px), then another 10% on top of
-     that. Top offset recalculated each time so the branch's upper surface
-     still lines up with the box's bottom edge at the new scale. */
-  width: clamp(133px, 16.9vw, 218px);
-  aspect-ratio: 1 / 1;
-  z-index: 2;
-  image-rendering: pixelated;
-  pointer-events: none;
-}
-/* The lamp post the "booking" box rests on -- same setup as .tree-shows,
-   mirrored to the opposite side. The post runs flush along the left screen
-   edge (the source art touches that edge already, so no mirroring or offset
-   is needed) with its arm reaching right; positioned so the arm's upper
-   surface lines up with the box's bottom edge. */
-.lamp-booking {
-  position: absolute;
-  top: calc(2vh + 150px);
-  left: 0;
-  /* 10% larger than clamp(110px, 14vw, 180px), then another 10% on top of
-     that. Top offset recalculated so the arm's upper surface still lines
-     up with the box's bottom edge at the new scale. */
-  width: clamp(133px, 16.9vw, 218px);
-  aspect-ratio: 1 / 1;
-  z-index: 2;
-  image-rendering: pixelated;
-  pointer-events: none;
-}
-/* Decorative headphones behind the "socials" box -- same "box rests on top"
-   treatment as .tree-shows/.lamp-booking, just bottom-anchored: the box's
-   bottom edge lines up with the top of the headband, like the box is
-   perched on it, with the rest of the headphones visible below instead of
-   the box overlapping into the middle of it. */
-.headphones-corner {
-  position: absolute;
-  bottom: calc(6vh - 109px);
-  right: 14px;
-  width: clamp(121px, 15.4vw, 198px);
-  aspect-ratio: 1 / 1;
-  z-index: 2;
-  image-rendering: pixelated;
-  pointer-events: none;
-}
-
-/* Decorative pointing hand behind the "streams" box -- mirrored version of
-   .headphones-corner's treatment: the box's bottom edge lines up with the top
-   of the pointing finger (with its tied string), like the box is perched on
-   the fingertip, mirroring how "shows" rests on the tree's branch. Offset
-   recalculated for the solid-silhouette hand art (finger's top surface sits
-   higher in the frame than the old outline hand's did). */
-.hand-corner {
-  position: absolute;
-  bottom: calc(6vh - 63px);
-  left: 0;
-  width: clamp(121px, 15.4vw, 198px);
-  aspect-ratio: 1 / 1;
-  z-index: 2;
-  image-rendering: pixelated;
-  pointer-events: none;
-}
-
-@media (max-width: 640px) {
-  .headphones-corner {
-    /* At the clamp's minimum width the image is much shorter, so it needs
-       to sit higher (closer to the box) to avoid leaving a gap below it. */
-    bottom: calc(6vh - 40px);
-  }
-  .hand-corner {
-    bottom: calc(6vh - 11px);
-  }
-}
-
 .corner-streams {
-  bottom: calc(6vh + 70px);
-  left: 6vw;
+  bottom: 4cqh;
+  left: 4.5cqw;
 }
 .corner-socials {
-  bottom: calc(6vh + 70px);
-  right: 6vw;
+  bottom: 4cqh;
+  right: 4.5cqw;
 }
 
 .stump-anchor {
@@ -280,56 +106,6 @@
   left: 50%;
   transform: translate(-50%, -50%);
   pointer-events: none;
-}
-
-.stump-pixel {
-  position: absolute;
-  top: 0;
-  left: 0;
-}
-
-.wordmark-wrap {
-  /* Tagline's bottom edge sits just above the bird's resting spot -- the
-     bird is a 72px sprite centered on the viewport center (50%/50%, with
-     its own -50%/-50% translate), so its top edge is at "50% - 36px";
-     an 8px gap above that puts this wrap's bottom (== its `top` value,
-     since it's translated up by its own full height) at "50% - 44px". */
-  position: absolute;
-  top: calc(50% - 44px);
-  left: 50%;
-  transform: translate(-50%, -100%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  text-align: center;
-  pointer-events: none;
-}
-
-.sky-strip {
-  position: absolute;
-  top: 3vh;
-  left: 0;
-  width: 100%;
-  height: 100px;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.wordmark {
-  margin: 0;
-  font-family: var(--font-pixel);
-  font-size: 30px;
-  letter-spacing: 0.04em;
-  color: var(--ink);
-}
-
-.tagline {
-  margin: 0;
-  font-family: var(--font-pixel);
-  font-size: 15px;
-  color: var(--ink);
-  opacity: 0.6;
 }
 
 .bird {
@@ -341,161 +117,28 @@
   image-rendering: pixelated;
 }
 
-/* Brief white flicker at the top of the worm-eating celebration, right
-   before the bird explodes -- `invert` flips the dark line-art to a bright
-   flash rather than relying on `brightness` (which can't lighten pixels
-   that start at pure black). `steps(1)` gives a hard flicker instead of a
-   smooth fade, matching the pixel-art feel. */
-.bird-flash {
-  animation: bird-flash 0.4s steps(1) 1;
-}
-
-@keyframes bird-flash {
-  0%,
-  100% {
-    filter: none;
-  }
-  25%,
-  75% {
-    filter: invert(1) brightness(2) drop-shadow(0 0 10px #fff);
-  }
-  50% {
-    filter: none;
-  }
-}
-
-/* Puff of pixels standing in for the bird "exploding" -- see BirdBurst.tsx.
-   Positioned the same way as .bird (50%/50% anchor + translate). */
-.bird-burst {
+.food {
   position: absolute;
   top: 50%;
   left: 50%;
-  z-index: 6;
+  z-index: 4;
   pointer-events: none;
 }
 
-.bird-burst-piece {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 6px;
-  height: 6px;
+.food-pellet {
+  width: 10px;
+  height: 10px;
   background: var(--ink);
-  animation: bird-burst-fly 0.5s ease-out forwards;
+  animation: food-drop 0.4s steps(4, end);
 }
 
-@keyframes bird-burst-fly {
-  0% {
-    transform: translate(-50%, -50%) translate(0, 0);
-    opacity: 1;
-  }
-  100% {
-    transform: translate(-50%, -50%) translate(var(--dx), var(--dy));
-    opacity: 0;
-  }
-}
-
-/* "+1" that floats up from the bird's current spot and fades out when a
-   worm is eaten -- see Landing.tsx `floatyTexts`. Positioned the same way
-   as .bird (50%/50% anchor + JS-driven `translate`), with the rise/fade
-   animated on the independent `transform` property so it composites with
-   that translate instead of fighting it. */
-.floaty-plus-one {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  z-index: 6;
-  font-family: var(--font-pixel);
-  font-size: 16px;
-  color: var(--ink);
-  pointer-events: none;
-  animation: floaty-rise 1.1s ease-out forwards;
-}
-
-@keyframes floaty-rise {
-  0% {
-    transform: translate(-50%, -50%) translateY(0);
-    opacity: 1;
-  }
-  100% {
-    transform: translate(-50%, -50%) translateY(-56px);
-    opacity: 0;
-  }
-}
-
-/* Confetti burst for reaching the celebration threshold -- see
-   Confetti.tsx. Pieces fall the full viewport height and are cleared once
-   the last one lands. */
-.confetti-field {
-  position: absolute;
-  inset: 0;
-  z-index: 20;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.confetti-piece {
-  position: absolute;
-  top: -20px;
-  width: 8px;
-  height: 8px;
-  animation-name: confetti-fall;
-  animation-timing-function: linear;
-  animation-fill-mode: forwards;
-  image-rendering: pixelated;
-}
-
-@keyframes confetti-fall {
-  0% {
-    transform: translateY(0) rotate(var(--start-rotate, 0deg));
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(110vh) rotate(calc(var(--start-rotate, 0deg) + 360deg));
-    opacity: 0.9;
-  }
-}
-
-.sky-body {
-  position: absolute;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 1;
-  image-rendering: pixelated;
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-/* Unlike the sun (which stays behind the clouds), the moon passes in front
-   of the star scatter (z-index 2). */
-.sky-body-moon {
-  z-index: 3;
-}
-
-.cloud-scatter,
-.star-scatter {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-}
-
-.cloud-tile {
-  position: absolute;
-}
-
-.cloud-pixel {
-  position: absolute;
-  top: 0;
-  left: 0;
-}
-
-.star-cluster {
-  position: absolute;
-  image-rendering: pixelated;
+@keyframes food-drop {
+  from { transform: translateY(-70px); }
+  to { transform: translateY(0); }
 }
 
 .section-panel {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 10;
   background: var(--paper);
@@ -503,11 +146,11 @@
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  padding: 8vh 8vw;
+  padding: 8cqh 8cqw;
   opacity: 0;
   transform: translateY(12px);
   pointer-events: none;
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition: opacity 0.3s steps(3, end), transform 0.3s steps(3, end);
 }
 
 .section-panel.is-open {
@@ -534,7 +177,7 @@
 
 .panel-title {
   font-family: var(--font-pixel);
-  font-size: clamp(24px, 5vw, 40px);
+  font-size: clamp(24px, 5cqw, 40px);
   margin: 0 0 1rem;
   color: var(--ink);
 }
@@ -578,19 +221,24 @@
   opacity: 0.6;
 }
 
-@media (max-width: 640px) {
+@container (max-width: 640px) {
   .corner-node {
-    width: 110px;
-    padding: 12px 14px;
-  }
-  .corner-glyph {
-    width: 20px;
-    height: 20px;
+    width: max-content;
+    min-width: 110px;
+    padding: 12px 16px;
   }
   .corner-label {
-    font-size: 14px;
+    font-size: 20px;
   }
-  .wordmark {
-    font-size: 23px;
+}
+
+/* Narrow screens (phones): slightly smaller labels. */
+@container (max-width: 420px) {
+  .corner-label {
+    font-size: 18px;
+  }
+  .corner-node {
+    min-width: 0;
+    padding: 12px 14px;
   }
 }
