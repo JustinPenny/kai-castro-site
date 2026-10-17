@@ -1,28 +1,31 @@
 import { useEffect, useRef, useState } from 'react'
-import birdIdle from './assets/bird_idle.webp'
-import birdUp from './assets/bird_up.webp'
-import birdDown from './assets/bird_down.webp'
+import buddyIdle from './assets/buddy_idle.webp'
+import buddyDown from './assets/buddy_idle_down.webp'
+import buddyBlink from './assets/buddy_idle_blink.webp'
+import buddyBeak from './assets/buddy_beak.webp'
+import buddyFlap from './assets/buddy_flap.webp'
+import buddyEat1 from './assets/buddy_eat_1.webp'
+import buddyEat2 from './assets/buddy_eat_2.webp'
 
-// Same on-screen footprint as the old pixel-grid sprite (72px wide).
-const SIZE = 72
+// On-screen size of the buddy at growth 1 (the art is 128x128 pixels).
+const SIZE = 160
 
-const SRC = {
-  perched: birdIdle,
-  fly_up: birdUp,
-  fly_down: birdDown,
-} as const
+// Idle: a slow two-pose bob (up, down). One "bob" = one up pose plus one
+// down pose. The up pose is swapped for a blink on every 4th bob and for
+// an open beak (a caw) on every 10th; the beak wins on bobs that are both.
+const BOB_POSE_MS = 650
+const BLINK_EVERY = 4
+const CAW_EVERY = 10
+// Moving: alternate the flap pose with the idle-up pose.
+const FLAP_FRAME_MS = 140
 
 interface BirdProps {
   flying: boolean
   offsetX: number
   offsetY: number
   durationMs: number
-  // 1 = normal size, 1.5 = 50% bigger (from eating worms). Animates via the
-  // width/height transition below instead of `scale`, since `scale` is
-  // reserved for the instant left/right flip.
-  growthScale?: number
-  // Brief white flicker at the top of the worm-eating celebration.
-  flashing?: boolean
+  // 0 = not eating; 1 / 2 = which eat pose to show.
+  eatFrame?: 0 | 1 | 2
 }
 
 export default function Bird({
@@ -30,18 +33,25 @@ export default function Bird({
   offsetX,
   offsetY,
   durationMs,
-  growthScale = 1,
-  flashing = false,
+  eatFrame = 0,
 }: BirdProps) {
-  const [flapFrame, setFlapFrame] = useState<'fly_up' | 'fly_down'>('fly_up')
   const [facingLeft, setFacingLeft] = useState(false)
+  // Counts bob poses (even = up, odd = down); only advances while idle, so
+  // the blink/caw cadence picks up where it left off after a flight.
+  const [bobTick, setBobTick] = useState(0)
+  const [flapUp, setFlapUp] = useState(true)
   const prevOffsetX = useRef(offsetX)
 
   useEffect(() => {
+    if (flying) return
+    const id = setInterval(() => setBobTick((t) => t + 1), BOB_POSE_MS)
+    return () => clearInterval(id)
+  }, [flying])
+
+  useEffect(() => {
     if (!flying) return
-    const id = setInterval(() => {
-      setFlapFrame((f) => (f === 'fly_up' ? 'fly_down' : 'fly_up'))
-    }, 120)
+    setFlapUp(true)
+    const id = setInterval(() => setFlapUp((f) => !f), FLAP_FRAME_MS)
     return () => clearInterval(id)
   }, [flying])
 
@@ -54,28 +64,40 @@ export default function Bird({
     prevOffsetX.current = offsetX
   }, [offsetX])
 
-  const frameKey = flying ? flapFrame : 'perched'
-  const size = SIZE * growthScale
+  const bobNumber = Math.floor(bobTick / 2) + 1 // 1-based
+  const isDown = bobTick % 2 === 1
+  let src = buddyIdle
+  if (eatFrame) {
+    src = eatFrame === 1 ? buddyEat1 : buddyEat2
+  } else if (flying) {
+    src = flapUp ? buddyFlap : buddyIdle
+  } else if (isDown) {
+    src = buddyDown
+  } else if (bobNumber % CAW_EVERY === 0) {
+    src = buddyBeak
+  } else if (bobNumber % BLINK_EVERY === 0) {
+    src = buddyBlink
+  }
 
+
+  // `translate` animates the flight; `scale` is a separate CSS property
+  // with no transition, so the left/right mirror snaps instantly.
+  //
+  // Handheld-LCD feel: every transition is `steps()` instead of an eased
+  // curve, so the bird hops between a handful of discrete positions/sizes
+  // (like a low-framerate sprite) rather than gliding smoothly.
   return (
     <img
-      className={flashing ? 'bird bird-flash' : 'bird'}
-      src={SRC[frameKey]}
+      className="bird"
+      src={src}
       width={SIZE}
       height={SIZE}
       style={{
-        // `translate` animates the flight; `scale` is a separate CSS property
-        // with no transition, so the left/right mirror snaps instantly. Size
-        // (width/height) is a third independent axis so growing/shrinking
-        // from eating worms can transition smoothly without touching either
-        // of those. `translate`'s -50%/-50% resolves against this element's
-        // own (possibly grown) box, so it stays centered on its anchor point
-        // as it grows.
-        width: size,
-        height: size,
+        width: SIZE,
+        height: SIZE,
         translate: `calc(-50% + ${offsetX}px) calc(-50% + ${offsetY}px)`,
         scale: facingLeft ? '-1 1' : '1 1',
-        transition: `translate ${durationMs}ms cubic-bezier(0.45, 0, 0.55, 1), width 250ms ease-out, height 250ms ease-out`,
+        transition: `translate ${durationMs}ms steps(8, end)`,
       }}
       alt=""
       aria-hidden="true"
