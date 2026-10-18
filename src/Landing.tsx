@@ -1,11 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import Bird from './Bird'
+import StatsPage from './StatsPage'
+import type { DeviceAction, Stats } from './stats'
 import { CORNERS, SECTION_CONTENT, type SectionKey } from './sections'
 import { useBandsintownShows } from './useBandsintownShows'
 import { formatShowLabel, BANDSINTOWN_ARTIST_URL } from './bandsintown'
 import './Landing.css'
 
 const FLIGHT_MS = 700
+// Clicking within this many px of the buddy's center opens its stats.
+const STATS_CLICK_RADIUS = 60
+// Size of the hover brackets: a bit larger than the 160px buddy sprite so they frame it without clipping.
+const HIGHLIGHT_SIZE = 184
 // Food: a little pellet (1/16 of the buddy sprite) dropped near the buddy.
 const FOOD_DROP_MS = 400
 const EAT_FRAME_MS = 400
@@ -35,15 +41,24 @@ export default function Landing({
   feedTick = 0,
   pottyTick = 0,
   sleepTick = 0,
+  playTick = 0,
+  stats,
+  onAction,
 }: {
   feedTick?: number
   pottyTick?: number
   sleepTick?: number
+  playTick?: number
+  stats: Stats
+  // Called when a device action actually starts (not when it's ignored).
+  onAction: (action: DeviceAction) => void
 }) {
   const [birdOffset, setBirdOffset] = useState({ x: 0, y: 0 })
   const [flying, setFlying] = useState(false)
   const [target, setTarget] = useState<SectionKey | null>(null)
   const [panelOpen, setPanelOpen] = useState(false)
+  const [statsOpen, setStatsOpen] = useState(false)
+  const [hoverBuddy, setHoverBuddy] = useState(false)
   const [foods, setFoods] = useState<Food[]>([])
   const [eatFrame, setEatFrame] = useState<0 | 1 | 2>(0)
   const [sleepFrame, setSleepFrame] = useState(0)
@@ -72,8 +87,8 @@ export default function Landing({
   }, [])
 
   useEffect(() => {
-    panelRef.current = panelOpen
-  }, [panelOpen])
+    panelRef.current = panelOpen || statsOpen
+  }, [panelOpen, statsOpen])
 
   useEffect(() => {
     if (feedTick > 0) void feed()
@@ -89,6 +104,11 @@ export default function Landing({
     if (sleepTick > 0) void startSleep()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sleepTick])
+
+  useEffect(() => {
+    if (playTick > 0) startPlay()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playTick])
 
   function flyTo(x: number, y: number, after?: () => void) {
     if (flightTimer.current) clearTimeout(flightTimer.current)
@@ -110,10 +130,17 @@ export default function Landing({
   // Drop 1-3 pellets near the buddy, then have it walk to each and eat it
   // (eat pose 1, then 2).
   // Nap: fall asleep (1-5), stir (4, 5, 4, 5), wake up (4-1), then idle.
+  // Play has no animation yet; it just counts as an action.
+  function startPlay() {
+    if (feedingRef.current || panelRef.current || flying) return
+    onAction('play')
+  }
+
   async function startSleep() {
     if (feedingRef.current || panelRef.current || flying) return
     feedingRef.current = true
     setFeeding(true)
+    onAction('sleep')
     for (const frame of SLEEP_SEQUENCE) {
       if (!alive.current) return
       setSleepFrame(frame)
@@ -129,6 +156,7 @@ export default function Landing({
     if (feedingRef.current || panelRef.current || flying) return
     feedingRef.current = true
     setFeeding(true)
+    onAction('bathroom')
     for (const frame of [1, 2, 3] as const) {
       if (!alive.current) return
       setPottyFrame(frame)
@@ -145,6 +173,7 @@ export default function Landing({
     if (!el) return
     feedingRef.current = true
     setFeeding(true)
+    onAction('feed')
 
     const count = MIN_FOOD + Math.floor(Math.random() * (MAX_FOOD - MIN_FOOD + 1))
     // Food stays in a tight area around the screen center.
@@ -202,19 +231,47 @@ export default function Landing({
     flyTo(0, 0, () => setTarget(null))
   }
 
+  function isOverBuddy(e: React.MouseEvent<HTMLDivElement>) {
+    const homeEl = homeRef.current
+    if (!homeEl) return false
+    const home = centerOf(homeEl)
+    return (
+      Math.hypot(e.clientX - (home.x + birdPos.current.x), e.clientY - (home.y + birdPos.current.y)) <=
+      STATS_CLICK_RADIUS
+    )
+  }
+
+  function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+    const over = !flying && !panelOpen && !feeding && !statsOpen && isOverBuddy(e)
+    if (over !== hoverBuddy) setHoverBuddy(over)
+  }
+
   function handleBackgroundClick(e: React.MouseEvent<HTMLDivElement>) {
-    if (flying || panelOpen || feeding) return
+    if (flying || panelOpen || feeding || statsOpen) return
     // The corner buttons handle their own clicks; don't also fire a second,
     // conflicting flight from the bubbled-up background click.
     if ((e.target as HTMLElement).closest('.corner-group')) return
     const homeEl = homeRef.current
     if (!homeEl) return
     const home = centerOf(homeEl)
+    // A click right on the buddy's center opens its stats page instead.
+    const buddyX = home.x + birdPos.current.x
+    const buddyY = home.y + birdPos.current.y
+    if (Math.hypot(e.clientX - buddyX, e.clientY - buddyY) <= STATS_CLICK_RADIUS) {
+      setStatsOpen(true)
+      return
+    }
     flyTo(e.clientX - home.x, e.clientY - home.y)
   }
 
   return (
-    <div className="landing" ref={landingRef} onClick={handleBackgroundClick}>
+    <div
+      className={`landing ${hoverBuddy ? 'is-hovering-buddy' : ''}`}
+      ref={landingRef}
+      onClick={handleBackgroundClick}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={() => setHoverBuddy(false)}
+    >
       {CORNERS.map((c) => (
         <div key={c.key} className={`corner-group corner-${c.key}`}>
           <button
@@ -224,7 +281,7 @@ export default function Landing({
             }}
             className="corner-node"
             onClick={() => goTo(c.key)}
-            disabled={flying || panelOpen || feeding}
+            disabled={flying || panelOpen || feeding || statsOpen}
           >
             <span className="corner-label">{c.label}</span>
           </button>
@@ -245,7 +302,20 @@ export default function Landing({
         </div>
       ))}
 
+      {hoverBuddy && !flying && !feeding && !statsOpen && !panelOpen && (
+        <div
+          className="buddy-highlight"
+          style={{
+            width: HIGHLIGHT_SIZE,
+            height: HIGHLIGHT_SIZE,
+            translate: `calc(-50% + ${birdOffset.x}px) calc(-50% + ${birdOffset.y}px)`,
+          }}
+        />
+      )}
+
       <Bird eatFrame={eatFrame} pottyFrame={pottyFrame} sleepFrame={sleepFrame} flying={flying} offsetX={birdOffset.x} offsetY={birdOffset.y} durationMs={FLIGHT_MS} />
+
+      {statsOpen && <StatsPage stats={stats} onClose={() => setStatsOpen(false)} />}
 
       {target && (
         <div className={`section-panel ${panelOpen ? 'is-open' : ''}`}>

@@ -170,6 +170,14 @@
   margin-bottom: 2rem;
 }
 
+/* Pinned to the top-left of the section panels, same spot as on the stats page. */
+.section-panel .back-btn {
+  position: absolute;
+  top: 4cqh;
+  left: 5cqw;
+  margin: 0;
+}
+
 .back-btn:hover {
   background: var(--ink);
   color: var(--paper);
@@ -241,4 +249,35 @@
     min-width: 0;
     padding: 12px 14px;
   }
+}
+
+.landing.is-hovering-buddy {
+  cursor: pointer;
+}
+
+/* Viewfinder brackets around the buddy while the pointer is over it --
+   the same "this is selectable" cue the corner buttons give on hover. */
+.buddy-highlight {
+  --bracket: 4px;
+  --len: 22px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 6;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--ink), var(--ink)) top left / var(--len) var(--bracket),
+    linear-gradient(var(--ink), var(--ink)) top left / var(--bracket) var(--len),
+    linear-gradient(var(--ink), var(--ink)) top right / var(--len) var(--bracket),
+    linear-gradient(var(--ink), var(--ink)) top right / var(--bracket) var(--len),
+    linear-gradient(var(--ink), var(--ink)) bottom left / var(--len) var(--bracket),
+    linear-gradient(var(--ink), var(--ink)) bottom left / var(--bracket) var(--len),
+    linear-gradient(var(--ink), var(--ink)) bottom right / var(--len) var(--bracket),
+    linear-gradient(var(--ink), var(--ink)) bottom right / var(--bracket) var(--len);
+  background-repeat: no-repeat;
+  animation: highlight-blink 0.8s steps(1, end) infinite;
+}
+
+@keyframes highlight-blink {
+  50% { opacity: 0.35; }
 }

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Landing from './Landing'
+import { ACTION_STAT, randomStats, STAT_DROP, type DeviceAction } from './stats'
 import './Device.css'
 import feedIcon from './assets/food_icon.webp'
 import bathroomIcon from './assets/potty_icon.webp'
@@ -16,16 +17,27 @@ const LCD_B = '0.122 0.247 0.420 0.627'
 
 // Left to right, as printed under the screen.
 const DEVICE_BUTTONS = [
-  { label: 'Feed', icon: feedIcon },
-  { label: 'Bathroom', icon: bathroomIcon },
-  { label: 'Sleep', icon: sleepIcon },
-  { label: 'Play', icon: playIcon },
-]
+  { action: 'feed', label: 'Feed', icon: feedIcon },
+  { action: 'bathroom', label: 'Bathroom', icon: bathroomIcon },
+  { action: 'sleep', label: 'Sleep', icon: sleepIcon },
+  { action: 'play', label: 'Play', icon: playIcon },
+] as const
 
 function App() {
   const [feedTick, setFeedTick] = useState(0)
   const [pottyTick, setPottyTick] = useState(0)
   const [sleepTick, setSleepTick] = useState(0)
+  const [playTick, setPlayTick] = useState(0)
+  // Randomized once per page load.
+  const [stats, setStats] = useState(randomStats)
+
+  // Every device action lowers its stat by 25 points, down to a floor of 0.
+  function handleAction(action: DeviceAction) {
+    const key = ACTION_STAT[action]
+    setStats((s) => ({ ...s, [key]: Math.max(0, s[key] - STAT_DROP) }))
+  }
+
+  const ticks = { feed: setFeedTick, bathroom: setPottyTick, sleep: setSleepTick, play: setPlayTick }
   return (
     <>
       <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true" focusable="false">
@@ -50,24 +62,25 @@ function App() {
           </header>
           <div className="device-bezel">
             <div className="device-screen">
-              <Landing feedTick={feedTick} pottyTick={pottyTick} sleepTick={sleepTick} />
+              <Landing
+                feedTick={feedTick} pottyTick={pottyTick} sleepTick={sleepTick}
+                playTick={playTick}
+                stats={stats}
+                onAction={handleAction}
+              />
               {/* Unfiltered on purpose: the pixel grid and glass shading
                   sit on top of the palette, not inside it. */}
               <div className="lcd-overlay" aria-hidden="true" />
             </div>
           </div>
           <div className="device-buttons">
-            {DEVICE_BUTTONS.map(({ label, icon }) => (
-              <button key={label} type="button" className="device-button" aria-label={label}
-                onClick={
-                  label === 'Feed'
-                    ? () => setFeedTick((t) => t + 1)
-                    : label === 'Bathroom'
-                      ? () => setPottyTick((t) => t + 1)
-                      : label === 'Sleep'
-                        ? () => setSleepTick((t) => t + 1)
-                        : undefined
-                }
+            {DEVICE_BUTTONS.map(({ action, label, icon }) => (
+              <button
+                key={action}
+                type="button"
+                className="device-button"
+                aria-label={label}
+                onClick={() => ticks[action]((t) => t + 1)}
               >
                 <span className="device-button-cap">
                   <img className="device-button-icon" src={icon} alt="" />
