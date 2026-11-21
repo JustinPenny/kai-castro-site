@@ -39,7 +39,6 @@ export default function Screen({
   const [section, setSection] = useState<SectionKey | null>(null)
   const [panelOpen, setPanelOpen] = useState(false)
   const [statsOpen, setStatsOpen] = useState(false)
-  const [hoverBuddy, setHoverBuddy] = useState(false)
   const [acting, setActing] = useState(false)
   const shows = useShows()
 
@@ -59,8 +58,6 @@ export default function Screen({
   }, [])
 
   const blocked = flying || panelOpen || statsOpen || acting
-  // Buddy sprite width scales with the screen, so hit-testing does too.
-  const buddyRadius = () => (screenRef.current?.clientWidth ?? 300) * 0.16
 
   function flyTo(x: number, y: number) {
     if (x - posRef.current.x > 2) setFacingLeft(false)
@@ -150,16 +147,8 @@ export default function Screen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [command])
 
-  function overBuddy(e: React.MouseEvent) {
-    const home = homeRef.current
-    if (!home) return false
-    const h = centerOf(home)
-    return Math.hypot(e.clientX - h.x - posRef.current.x, e.clientY - h.y - posRef.current.y) <= buddyRadius()
-  }
-
   function handleClick(e: React.MouseEvent) {
     if (blocked || (e.target as HTMLElement).closest('button, a')) return
-    if (overBuddy(e)) return openStats()
     const home = homeRef.current
     if (!home) return
     const h = centerOf(home)
@@ -169,10 +158,8 @@ export default function Screen({
   return (
     <div
       ref={screenRef}
-      className={`lcd${hoverBuddy ? ' is-hovering-buddy' : ''}`}
+      className="lcd"
       onClick={handleClick}
-      onMouseMove={(e) => setHoverBuddy(!blocked && overBuddy(e))}
-      onMouseLeave={() => setHoverBuddy(false)}
     >
       <ul className="lcd-menu" aria-label="Pet menu">
         {MENU.map(({ item, label, icon }, i) => (
@@ -211,9 +198,16 @@ export default function Screen({
         <div key={f.id} className="food" style={{ translate: `calc(-50% + ${f.x}px) calc(-50% + ${f.y}px)` }} />
       ))}
 
-      {hoverBuddy && <div className="buddy-highlight" style={{ translate: `calc(-50% + ${pos.x}px) calc(-50% + ${pos.y}px)` }} />}
-
-      <Buddy pose={pose} flying={flying} x={pos.x} y={pos.y} facingLeft={facingLeft} durationMs={FLIGHT_MS} />
+      <Buddy
+        pose={pose}
+        flying={flying}
+        x={pos.x}
+        y={pos.y}
+        facingLeft={facingLeft}
+        durationMs={FLIGHT_MS}
+        disabled={blocked}
+        onClick={openStats}
+      />
 
       {statsOpen && (
         <div className="lcd-page">
