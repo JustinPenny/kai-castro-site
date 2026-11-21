@@ -1,0 +1,375 @@
+/* Everything on the shell is positioned in % of the shell art
+   (src/assets/shell.svg, viewBox 800x1040), so it scales as one piece. */
+
+:root {
+  --paper: #fff;
+  --ink: #0a0a0a;
+  --gold: #e2c06c;
+  --pixel: 'Press Start 2P', 'Courier New', monospace;
+  font: 16px/1.45 system-ui, sans-serif;
+  color-scheme: dark;
+  background: radial-gradient(ellipse at 50% 30%, #1b2766, #070b22 70%);
+  min-height: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.stage {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.device {
+  position: relative;
+  width: min(100vw, calc((100svh - 8px) * 800 / 1040), 640px);
+  aspect-ratio: 800 / 1040;
+  container-type: inline-size;
+}
+
+.shell {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Printed logo, where the toy says "Tamagotchi". */
+.brand {
+  position: absolute;
+  top: 23.5%;
+  left: 0;
+  right: 0;
+  text-align: center;
+  pointer-events: none;
+}
+
+.brand h1 {
+  margin: 0;
+  font-family: 'Chewy', var(--pixel);
+  font-weight: 400;
+  font-size: 9.5cqw;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  color: var(--gold);
+  text-shadow: 0 0.35cqw 0 #6e5216;
+}
+
+.brand p {
+  margin: 0.6cqw 0 0;
+  font-family: var(--pixel);
+  font-size: 1.9cqw;
+  color: var(--gold);
+}
+
+.screen {
+  position: absolute;
+  left: 25%;
+  top: 38.4615%;
+  width: 50%;
+  height: 37.5%;
+  border-radius: 1.6cqw;
+  overflow: hidden;
+  background: #c8d4a0;
+}
+
+/* Pale-blue buttons from the photo. */
+.hw-button {
+  position: absolute;
+  width: 8.5%;
+  aspect-ratio: 1;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  background: radial-gradient(circle at 38% 32%, #f4f9ff, #b4d2f2 55%, #7fa6d6);
+  box-shadow: 0 0.5cqw 0 #46669c, 0 0.9cqw 1.4cqw rgba(0, 0, 20, 0.5);
+}
+/* Invisible bigger touch target. */
+.hw-button::before {
+  content: '';
+  position: absolute;
+  inset: -40%;
+  border-radius: 50%;
+}
+.hw-button:active {
+  translate: 0 0.5cqw;
+  box-shadow: 0 0 0 #46669c;
+}
+.hw-button:focus-visible {
+  outline: 0.6cqw solid var(--gold);
+  outline-offset: 0.4cqw;
+}
+.hw-a { left: 32%; top: 85.67%; }
+.hw-b { left: 45.75%; top: 88.08%; }
+.hw-c { left: 59.5%; top: 85.67%; }
+
+/* ---------- LCD ---------- */
+
+.lcd {
+  position: absolute;
+  inset: 0;
+  container-type: size;
+  overflow: hidden;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--pixel);
+  filter: url(#lcd-palette);
+}
+
+.lcd button,
+.lcd a {
+  font: inherit;
+  color: var(--ink);
+}
+
+/* Grid, scanlines and glare sit on top, outside the palette filter. */
+.lcd-glass {
+  --px: 4px;
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0 18%, transparent 18%),
+    linear-gradient(to right, rgba(20, 28, 10, 0.1) 1px, transparent 1px) 0 0 / var(--px) var(--px),
+    linear-gradient(to bottom, rgba(20, 28, 10, 0.1) 1px, transparent 1px) 0 0 / var(--px) var(--px);
+  box-shadow: inset 0 0 20px 3px rgba(20, 28, 10, 0.35);
+}
+
+.lcd-menu {
+  position: absolute;
+  top: 2cqh;
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  justify-content: center;
+  gap: 3cqw;
+  z-index: 3;
+}
+
+.lcd-menu-item {
+  width: 11cqw;
+  height: 11cqw;
+  padding: 1cqw;
+  border: 0.8cqw solid transparent;
+  background: none;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.lcd-menu-item img,
+.lcd-menu-item svg {
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  fill: var(--ink);
+}
+.lcd-menu-item[aria-current],
+.lcd-menu-item:hover {
+  border-color: var(--ink);
+}
+
+.corner {
+  position: absolute;
+  z-index: 3;
+  padding: 1.8cqw 2.4cqw;
+  border: 0.8cqw solid var(--ink);
+  background: var(--paper);
+  font-size: 4.6cqw;
+  cursor: pointer;
+}
+.corner:hover:not(:disabled) {
+  background: var(--ink);
+  color: var(--paper);
+}
+.corner:disabled {
+  cursor: default;
+}
+.corner-booking { top: 19cqh; left: 4cqw; }
+.corner-shows { top: 19cqh; right: 4cqw; }
+.corner-streams { bottom: 5cqh; left: 4cqw; }
+.corner-socials { bottom: 5cqh; right: 4cqw; }
+
+.home,
+.buddy,
+.food,
+.buddy-highlight {
+  position: absolute;
+  top: 58%;
+  left: 50%;
+  pointer-events: none;
+}
+.home {
+  translate: -50% -50%;
+}
+
+.buddy {
+  z-index: 5;
+  width: 28cqw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.buddy svg {
+  width: 100%;
+  fill: var(--ink);
+}
+.buddy[data-pose='idle down'] svg {
+  translate: 0 4%;
+}
+.buddy-pose {
+  margin-top: 1cqw;
+  font-size: 4cqw;
+  white-space: nowrap;
+}
+
+.food {
+  z-index: 4;
+  width: 3cqw;
+  height: 3cqw;
+  translate: -50% -50%;
+  background: var(--ink);
+  animation: food-drop 0.4s steps(4, end);
+}
+@keyframes food-drop {
+  from { transform: translateY(-20cqh); }
+}
+
+.lcd.is-hovering-buddy {
+  cursor: pointer;
+}
+.buddy-highlight {
+  --b: 0.8cqw;
+  --l: 5cqw;
+  z-index: 6;
+  width: 34cqw;
+  height: 34cqw;
+  margin-top: 2cqw;
+  --g: linear-gradient(var(--ink), var(--ink));
+  background:
+    var(--g) top left / var(--l) var(--b), var(--g) top left / var(--b) var(--l),
+    var(--g) top right / var(--l) var(--b), var(--g) top right / var(--b) var(--l),
+    var(--g) bottom left / var(--l) var(--b), var(--g) bottom left / var(--b) var(--l),
+    var(--g) bottom right / var(--l) var(--b), var(--g) bottom right / var(--b) var(--l);
+  background-repeat: no-repeat;
+  animation: blink 0.8s steps(1, end) infinite;
+}
+@keyframes blink {
+  50% { opacity: 0.35; }
+}
+
+/* Full-screen pages: status and the four sections. */
+.lcd-page {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  padding: 5cqh 6cqw;
+  overflow-y: auto;
+  background: var(--paper);
+  display: flex;
+  flex-direction: column;
+  gap: 3cqh;
+  animation: page-in 0.3s steps(3, end);
+}
+.lcd-page.section {
+  opacity: 0;
+  pointer-events: none;
+  animation: none;
+}
+.lcd-page.section.is-open {
+  opacity: 1;
+  pointer-events: auto;
+  animation: page-in 0.3s steps(3, end);
+}
+@keyframes page-in {
+  from { opacity: 0; translate: 0 3cqh; }
+}
+
+.back-btn {
+  align-self: flex-start;
+  padding: 1.5cqw 2.5cqw;
+  border: 0.8cqw solid var(--ink);
+  background: var(--paper);
+  font-size: 3.6cqw !important;
+  cursor: pointer;
+}
+.back-btn:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.page-title {
+  margin: 0;
+  font-size: 8cqw;
+}
+.page-body {
+  margin: 0;
+  font-size: 4cqw;
+  line-height: 1.5;
+}
+.page-links {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5cqh;
+  font-size: 4cqw;
+  line-height: 1.5;
+}
+.page-links a {
+  text-decoration: none;
+  border-bottom: 0.6cqw solid var(--ink);
+  word-break: break-word;
+}
+.page-links a:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+.panel-status {
+  margin: 0;
+  opacity: 0.6;
+}
+
+.stats {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3cqh;
+  font-size: 4cqw;
+}
+.stats li {
+  display: grid;
+  gap: 1cqh;
+}
+.stat-bar {
+  height: 6cqh;
+  border: 0.8cqw solid var(--ink);
+  padding: 0.5cqw;
+}
+.stat-fill {
+  height: 100%;
+  transition: width 0.4s steps(5, end);
+  background: repeating-linear-gradient(to right, var(--ink) 0 2cqw, transparent 2cqw 2.8cqw);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .buddy {
+    transition: none !important;
+  }
+}

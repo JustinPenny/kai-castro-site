@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "kai-castro-site",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    // Only /api hits the Worker; everything else is served straight from assets with public/_headers.
+    "run_worker_first": ["/api/*"]
+  },
+  "vars": {
+    "BOOKING_EMAIL": "kai@kaicastro.com"
+  }
+  // Secret, set once with: npx wrangler secret put TURNSTILE_SECRET
+}
