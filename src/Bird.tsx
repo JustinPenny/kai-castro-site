@@ -8,6 +8,9 @@ import buddyEat1 from './assets/buddy_eat_1.webp'
 import buddyPotty1 from './assets/buddy_potty_1.webp'
 import buddyPotty2 from './assets/buddy_potty_2.webp'
 import buddyPotty3 from './assets/buddy_potty_3.webp'
+import buddyFun1 from './assets/buddy_fun_1.webp'
+import buddyFun2 from './assets/buddy_fun_2.webp'
+import buddyFun3 from './assets/buddy_fun_3.webp'
 import buddyEat2 from './assets/buddy_eat_2.webp'
 
 // Sleep poses, buddy_sleep_1..5. Loaded by glob so a pose that hasn't been
@@ -41,6 +44,8 @@ interface BirdProps {
   pottyFrame?: 0 | 1 | 2 | 3
   // 0 = awake; 1-5 = which sleep pose to show.
   sleepFrame?: number
+  // 0 = not playing; 1-3 = which play pose to show.
+  playFrame?: 0 | 1 | 2 | 3
 }
 
 export default function Bird({
@@ -51,6 +56,7 @@ export default function Bird({
   eatFrame = 0,
   pottyFrame = 0,
   sleepFrame = 0,
+  playFrame = 0,
 }: BirdProps) {
   const [facingLeft, setFacingLeft] = useState(false)
   // Counts bob poses (even = up, odd = down); only advances while idle, so
@@ -84,7 +90,9 @@ export default function Bird({
   const bobNumber = Math.floor(bobTick / 2) + 1 // 1-based
   const isDown = bobTick % 2 === 1
   let src = buddyIdle
-  if (sleepFrame) {
+  if (playFrame) {
+    src = playFrame === 1 ? buddyFun1 : playFrame === 2 ? buddyFun2 : buddyFun3
+  } else if (sleepFrame) {
     src = sleepPose(sleepFrame)
   } else if (pottyFrame) {
     src = pottyFrame === 1 ? buddyPotty1 : pottyFrame === 2 ? buddyPotty2 : buddyPotty3

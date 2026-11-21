@@ -17,6 +17,8 @@ const FOOD_DROP_MS = 400
 const EAT_FRAME_MS = 400
 const POTTY_FRAME_MS = 700
 const SLEEP_FRAME_MS = 700
+const PLAY_FRAME_MS = 500
+const PLAY_SEQUENCE = [1, 2, 3, 2, 3, 1] as const
 const SLEEP_SEQUENCE = [1, 2, 3, 4, 5, 4, 5, 4, 3, 2, 1]
 const MIN_FOOD = 1
 const MAX_FOOD = 3
@@ -62,6 +64,7 @@ export default function Landing({
   const [foods, setFoods] = useState<Food[]>([])
   const [eatFrame, setEatFrame] = useState<0 | 1 | 2>(0)
   const [sleepFrame, setSleepFrame] = useState(0)
+  const [playFrame, setPlayFrame] = useState<0 | 1 | 2 | 3>(0)
   const [pottyFrame, setPottyFrame] = useState<0 | 1 | 2 | 3>(0)
   const [feeding, setFeeding] = useState(false)
 
@@ -106,7 +109,7 @@ export default function Landing({
   }, [sleepTick])
 
   useEffect(() => {
-    if (playTick > 0) startPlay()
+    if (playTick > 0) void startPlay()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playTick])
 
@@ -130,10 +133,20 @@ export default function Landing({
   // Drop 1-3 pellets near the buddy, then have it walk to each and eat it
   // (eat pose 1, then 2).
   // Nap: fall asleep (1-5), stir (4, 5, 4, 5), wake up (4-1), then idle.
-  // Play has no animation yet; it just counts as an action.
-  function startPlay() {
+  // Play: cycle through the fun poses, then back to idle.
+  async function startPlay() {
     if (feedingRef.current || panelRef.current || flying) return
+    feedingRef.current = true
+    setFeeding(true)
     onAction('play')
+    for (const frame of PLAY_SEQUENCE) {
+      if (!alive.current) return
+      setPlayFrame(frame)
+      await wait(PLAY_FRAME_MS)
+    }
+    setPlayFrame(0)
+    feedingRef.current = false
+    setFeeding(false)
   }
 
   async function startSleep() {
@@ -313,7 +326,7 @@ export default function Landing({
         />
       )}
 
-      <Bird eatFrame={eatFrame} pottyFrame={pottyFrame} sleepFrame={sleepFrame} flying={flying} offsetX={birdOffset.x} offsetY={birdOffset.y} durationMs={FLIGHT_MS} />
+      <Bird eatFrame={eatFrame} pottyFrame={pottyFrame} sleepFrame={sleepFrame} playFrame={playFrame} flying={flying} offsetX={birdOffset.x} offsetY={birdOffset.y} durationMs={FLIGHT_MS} />
 
       {statsOpen && <StatsPage stats={stats} onClose={() => setStatsOpen(false)} />}
 
