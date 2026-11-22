@@ -9,7 +9,8 @@ export const BANDSINTOWN_URL = 'https://www.bandsintown.com/a/12427370-kai-castr
 export interface Show {
   id: string
   url: string
-  label: string
+  date: string // e.g. "Fri, Mar 14"
+  place: string // e.g. "Warehouse, Brooklyn, NY"
 }
 
 interface RawEvent {
@@ -29,7 +30,7 @@ async function fetchShows(): Promise<Show[]> {
     const d = new Date(e.datetime)
     const date = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: '2-digit' })
     const where = e.venue.region ? `${e.venue.city}, ${e.venue.region}` : `${e.venue.city}, ${e.venue.country}`
-    return { id: e.id, url: e.url, label: `${date} -- ${e.venue.name}, ${where}` }
+    return { id: e.id, url: e.url, date, place: `${e.venue.name}, ${where}` }
   })
 }
 

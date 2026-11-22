@@ -8,12 +8,20 @@ import { SECTIONS, STAT_LABELS, type Action, type MenuItem, type SectionKey, typ
 const WHEEL: SectionKey[] = ['booking', 'shows', 'socials', 'streams']
 const mod4 = (n: number) => ((n % 4) + 4) % 4
 const WHEEL_TUCK_MS = 4000
+// Wheel radii (cqh): the others, the selected one (lower), and tucked away.
+const WHEEL_R = 33
+const WHEEL_R_CURRENT = 39
+const WHEEL_R_TUCKED = 75
 // Shows starts highlighted: the turn that puts it at the bottom.
 const START_TURN = -WHEEL.indexOf('shows')
 
 // Device buttons, plus the pet actions (not wired to any control right now:
 // call navRef.current?.('feed') from App to trigger one).
 export type Nav = 'left' | 'right' | 'select' | 'back' | MenuItem
+
+// Links that leave the site open in a new tab (mailto: and # links don't).
+const external = (href: string) =>
+  /^https?:/.test(href) ? { target: '_blank', rel: 'noopener noreferrer' } : {}
 
 // An open page's highlightable items: its back button and links.
 const pageItems = (page: Element) => [...page.querySelectorAll<HTMLElement>('button:not(:disabled), a[href]')]
@@ -161,18 +169,94 @@ export default function Screen({
     const c = centerOf(item)
     setSection(key)
     await flyTo(c.x - h.x, c.y - h.y)
+    // The section page is already in the DOM (invisible) from setSection, so
+    // its title's spot can be measured.
+    const title = screenRef.current?.querySelector<HTMLElement>('.lcd-page.section .page-title')
+    const slide = title ? slideBox(item, title, true) : Promise.resolve()
     setPanelOpen(true)
+    await slide
+  }
+
+  // Shared-element slide between the selected wheel box and the page title
+  // (same text): toward the title when a section opens, back down to the
+  // wheel when it closes. Two copies of the box move together, the dark box
+  // and the plain title text, cross-fading, so only transform and opacity
+  // animate and the GPU does all of it (colour animations would pull the
+  // whole thing back onto the main thread).
+  function slideBox(item: HTMLElement, title: HTMLElement, toTitle: boolean) {
+    const lcd = screenRef.current
+    if (!lcd || matchMedia('(prefers-reduced-motion: reduce)').matches) return Promise.resolve()
+    const box = lcd.getBoundingClientRect()
+    const at = item.getBoundingClientRect()
+    const text = document.createRange()
+    text.selectNodeContents(title)
+    const to = text.getBoundingClientRect()
+    const scale = parseFloat(getComputedStyle(title).fontSize) / parseFloat(getComputedStyle(item).fontSize)
+    const dx = to.left + to.width / 2 - (at.left + at.width / 2)
+    const dy = to.top + to.height / 2 - (at.top + at.height / 2)
+    const onItem = 'translate(0, 0) scale(1)'
+    const onTitle = `translate(${dx}px, ${dy}px) scale(${scale})`
+    const [start, end] = toTitle ? [onItem, onTitle] : [onTitle, onItem]
+    const copy = (asTitle: boolean) => {
+      const c = item.cloneNode(true) as HTMLElement
+      c.setAttribute('aria-hidden', 'true')
+      Object.assign(c.style, {
+        position: 'absolute',
+        left: `${at.left - box.left}px`,
+        top: `${at.top - box.top}px`,
+        width: `${at.width}px`,
+        height: `${at.height}px`,
+        margin: '0',
+        zIndex: '30',
+        pointerEvents: 'none',
+        transition: 'none',
+      })
+      if (asTitle) Object.assign(c.style, { background: 'transparent', borderColor: 'transparent', color: 'var(--ink)' })
+      lcd.append(c)
+      return c
+    }
+    const boxCopy = copy(false)
+    const textCopy = copy(true)
+    // Unmanaged by React (no style prop on either), so this is safe to toggle.
+    title.style.visibility = 'hidden'
+    item.style.visibility = 'hidden'
+    // fill: hold the end state until the copies are removed (no one-frame flash).
+    const timing = { duration: 550, easing: 'cubic-bezier(0.65, 0, 0.35, 1)', fill: 'forwards' } as const
+    const anims = [
+      boxCopy.animate([{ transform: start, opacity: toTitle ? 1 : 0 }, { transform: end, opacity: toTitle ? 0 : 1 }], timing),
+      textCopy.animate([{ transform: start, opacity: toTitle ? 0 : 1 }, { transform: end, opacity: toTitle ? 1 : 0 }], timing),
+    ]
+    return Promise.all(anims.map((a) => a.finished))
+      .catch(() => {})
+      .finally(() => {
+        title.style.visibility = ''
+        item.style.visibility = ''
+        boxCopy.remove()
+        textCopy.remove()
+      })
   }
 
   function openStats() {
     if (!blocked) setStatsOpen(true)
   }
 
+  function closeStats() {
+    setStatsOpen(false)
+    setTucked(false)
+  }
+
+  // Back to the main screen, with every wheel option showing again.
   async function back() {
-    if (statsOpen) return setStatsOpen(false)
+    if (statsOpen) return closeStats()
     if (!panelOpen || flying) return
+    // Reverse slide: the title drops back down into the wheel's selected box
+    // while the page fades out and the pet flies home.
+    const item = section && itemRefs.current[section]
+    const title = screenRef.current?.querySelector<HTMLElement>('.lcd-page.is-open .page-title')
+    const slide = item && title ? slideBox(item, title, false) : Promise.resolve()
     setPanelOpen(false)
-    await flyTo(0, 0)
+    setTucked(false)
+    await Promise.all([flyTo(0, 0), slide])
     setSection(null)
   }
 
@@ -185,7 +269,20 @@ export default function Screen({
     items.forEach((el) => el.removeAttribute('data-hl'))
     const next = cur === -1 ? (dir === 1 ? 0 : items.length - 1) : (cur + dir + items.length) % items.length
     items[next].setAttribute('data-hl', '')
+    items[next].scrollIntoView({ block: 'nearest' }) // long Shows lists scroll
   }
+
+  // A section page opens with its bottom-most item highlighted, so select works
+  // straight away. Re-runs when show dates arrive, since the list changes then.
+  useEffect(() => {
+    const page = panelOpen && screenRef.current?.querySelector('.lcd-page.is-open')
+    if (!page) return
+    const items = pageItems(page)
+    items.forEach((el) => el.removeAttribute('data-hl'))
+    const last = items.at(-1)
+    last?.setAttribute('data-hl', '')
+    last?.scrollIntoView({ block: 'nearest' }) // only moves a long Shows list
+  }, [panelOpen, section, shows.status, shows.shows.length])
 
   // Device buttons (and, later, pet actions) come in here.
   const nav = (item: Nav) => {
@@ -217,14 +314,19 @@ export default function Screen({
       className="lcd"
       onClick={handleClick}
     >
-      <ul className={`wheel${tucked ? ' is-tucked' : ''}`} style={{ '--turn': turn } as React.CSSProperties} aria-label="Sections">
+      <ul className={`wheel${tucked ? ' is-tucked' : ''}`} aria-label="Sections">
         {WHEEL.map((key, i) => {
           const at = mod4(i + turn) // 0 bottom, 1 left, 2 top, 3 right
+          // Around the center at 90deg + (i + turn) * 90deg, then turned back so
+          // the label stays upright. Plain values, no CSS variables: Safari
+          // doesn't animate transforms whose change comes from a variable.
+          const angle = 90 + (i + turn) * 90
+          const radius = at === 0 ? WHEEL_R_CURRENT : tucked ? WHEEL_R_TUCKED : WHEEL_R
           return (
             <li
               key={key}
               className={`wheel-slot${at === 0 ? ' is-current' : ''}`}
-              style={{ '--i': i } as React.CSSProperties}
+              style={{ transform: `rotate(${angle}deg) translateX(${radius}cqh) rotate(${-angle}deg)` }}
               onMouseEnter={() => setHold(true)}
               onMouseLeave={() => setHold(false)}
             >
@@ -294,7 +396,7 @@ export default function Screen({
 
       {statsOpen && (
         <div className="lcd-page">
-          <button type="button" className="back-btn" onClick={() => setStatsOpen(false)}>
+          <button type="button" className="back-btn" onClick={closeStats}>
             &lt; back
           </button>
           <h2 className="page-title">Status</h2>
@@ -324,20 +426,28 @@ export default function Screen({
                 {shows.status === 'loading' && <li className="panel-status">Loading dates...</li>}
                 {shows.status === 'error' && (
                   <li>
-                    <a href={BANDSINTOWN_URL}>Dates on Bandsintown</a>
+                    <a href={BANDSINTOWN_URL} {...external(BANDSINTOWN_URL)} style={{ '--len': 20 } as React.CSSProperties}>
+                      Dates on Bandsintown
+                    </a>
                   </li>
                 )}
                 {shows.status === 'ready' && shows.shows.length === 0 && <li className="panel-status">No shows booked -- check back soon.</li>}
                 {shows.shows.map((s) => (
                   <li key={s.id}>
-                    <a href={s.url}>{s.label}</a>
+                    <a className="show-link" href={s.url} {...external(s.url)}>
+                      <span className="show-date">{s.date}</span>
+                      <span className="show-place">{s.place}</span>
+                    </a>
                   </li>
                 ))}
               </>
             ) : (
               SECTIONS[section].links.map((l) => (
                 <li key={l.label}>
-                  <a href={l.href}>{l.label}</a>
+                  {/* --len lets long labels (the email) shrink to fit the width. */}
+                  <a href={l.href} {...external(l.href)} style={{ '--len': l.label.length } as React.CSSProperties}>
+                    {l.label}
+                  </a>
                 </li>
               ))
             )}

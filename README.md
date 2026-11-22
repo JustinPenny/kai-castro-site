@@ -40,12 +40,15 @@ the Amplify console. Check them after a deploy with `curl -I https://<your-domai
   variables out of `@keyframes`, and don't give animations differing `animation-delay`s (in
   Chrome that makes every animation need main-thread frames); put offsets inside the keyframes.
 - The LCD palette is drawn with plain colours (`--ink`, `--ink-2`, `--paper` on `.lcd`), not a filter.
-- Fonts are subset to what's used (`src/assets/fonts`). To change the logo text, re-subset, e.g.
-  `pyftsubset BagelFatOne.woff2 --text="Kai Castro" --flavor=woff2 --output-file=bagel-fat-one-logo.woff2`.
+- Fonts are subset to what's used (`src/assets/fonts`). To change the tagline text, re-subset, e.g.
+  `pyftsubset manrope-latin-300-normal.woff2 --text="DJ/PRODUCER dj/producer" --flavor=woff2 --output-file=manrope-tagline.woff2`.
 - `/assets/*` is cached for a year (`customHttp.yml`); file names change whenever content does.
 - Show dates are fetched only once Shows is highlighted or opened.
 
 ## Art
+
+- `src/assets/kai-castro-wordmark.svg` is the KAI CASTRO wordmark, redrawn as vector strokes from the
+  poster artwork (the O is the bird logo). It's shown through a CSS mask, so its colour comes from CSS.
 
 - The device is pure CSS layers in `src/App.css`: the plain blue shell, a "sky" of sparkles and
   gold stars, moon, streaks and dots (`PIECES` in `src/App.tsx`) that fly out from the center in
