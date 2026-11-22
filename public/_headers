@@ -1,3 +1,7 @@
+# Built files have content hashes in their names, so they can be cached forever.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
 # Security headers for every static asset (Cloudflare Workers static assets).
 # /api/* responses set their own headers in worker/index.ts.
 /*

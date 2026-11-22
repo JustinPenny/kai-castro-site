@@ -33,12 +33,18 @@ async function fetchShows(): Promise<Show[]> {
   })
 }
 
-export function useShows() {
+// Fetches once `enabled` first turns true (Shows highlighted or opened), so
+// most visits never make the cross-origin request.
+export function useShows(enabled: boolean) {
+  // Sticky: once wanted, stay on, so scrolling away mid-fetch can't cancel it.
+  const [on, setOn] = useState(false)
+  if (enabled && !on) setOn(true)
   const [state, setState] = useState<{ status: 'loading' | 'ready' | 'error'; shows: Show[] }>({
     status: 'loading',
     shows: [],
   })
   useEffect(() => {
+    if (!on) return
     let cancelled = false
     fetchShows().then(
       (shows) => !cancelled && setState({ status: 'ready', shows }),
@@ -47,6 +53,6 @@ export function useShows() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [on])
   return state
 }

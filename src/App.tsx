@@ -1,17 +1,11 @@
-import { useState, type CSSProperties } from 'react'
-import Screen from './Screen'
-import { ACTION_STAT, MENU, randomStats, STAT_DROP, type Action, type MenuItem } from './content'
+import { memo, useRef, useState, type CSSProperties } from 'react'
+import Screen, { type Nav } from './Screen'
+import { ACTION_STAT, randomStats, STAT_DROP, type Action } from './content'
 import logo from './assets/bird-logo.svg'
-
-// 4-tone LCD palette (darkest -> lightest), applied to the screen as an SVG
-// filter: luminance first, then posterized into olive-grey tones.
-const LCD_R = '0.149 0.333 0.576 0.784'
-const LCD_G = '0.188 0.400 0.647 0.831'
-const LCD_B = '0.122 0.247 0.420 0.627'
 
 // Sparkles and gold pieces that fly out from the center of the device (see
 // .deco in App.css). s = size (cqw), t = seconds per flight, c = sparkle colour.
-// Start angles and offsets are random once per page load; each piece gets a
+// Start angles are random once per page load; each piece gets a
 // new random angle every time it loops (onAnimationIteration below).
 type Deco = { kind: 'sparkle' | 'star' | 'moon' | 'stripes' | 'dot'; s: number; t: number; c?: string }
 const SPARKLE_COLORS = ['#fff', '#fff', '#8fe0ff', '#ffb6f0']
@@ -24,19 +18,57 @@ const PIECES: Deco[] = [
   ...Array.from({ length: 5 }, () => ({ kind: 'stripes' as const, s: rand(9, 11), t: rand(11, 15) })),
   ...Array.from({ length: 8 }, () => ({ kind: 'dot' as const, s: rand(0.8, 1.2), t: rand(17, 23) })),
 ]
-const DECOR = PIECES.map((d) => ({ ...d, delay: -rand(0, d.t), angle: randomAngle() }))
+// No per-piece start delay: in Chrome, differing start times make every flight
+// need main-thread frames (~6% CPU idle); with one start time they run fully on
+// the GPU, and the different speeds spread them out within seconds.
+const DECOR = PIECES.map((d) => ({ ...d, angle: randomAngle() }))
+
+// The intro plays on the first load, then not again until INTRO_EVERY_MS has
+// passed since it last played (so refreshes skip it). Decided once per page
+// load at module level, so StrictMode's double render can't skip it in dev.
+const INTRO_EVERY_MS = 10 * 60 * 1000
+const INTRO_KEY = 'kc-intro-played-at'
+function shouldPlayIntro() {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return false
+  try {
+    const age = Date.now() - Number(localStorage.getItem(INTRO_KEY))
+    if (age >= 0 && age < INTRO_EVERY_MS) return false // negative = clock changed: play
+    localStorage.setItem(INTRO_KEY, String(Date.now()))
+  } catch {
+    // Storage blocked (some private modes): just play it.
+  }
+  return true
+}
+const PLAY_INTRO = shouldPlayIntro()
+
+// The drifting sky never changes after mount, so it's memoised: button presses
+// re-render App but not these ~80 elements.
+const Sky = memo(function Sky() {
+  return (
+    <div className="sky" aria-hidden="true">
+      {DECOR.map(({ kind, s, t, c, angle }, i) => (
+        <i
+          key={i}
+          className={`deco deco-${kind}`}
+          style={{ '--s': `${s}cqw`, '--t': `${t}s`, '--a': angle, '--c': c } as CSSProperties}
+          onAnimationIteration={(e) => e.currentTarget.style.setProperty('--a', randomAngle())}
+        />
+      ))}
+    </div>
+  )
+})
 
 // Intro shell pieces, in the clockwise order they snap in (timing in App.css).
 const PIECES_IN = ['top', 'right', 'bottom', 'left'] as const
 
-// Three buttons like the real toy: A cycles the menu, B confirms, C cancels.
+// Three buttons: left / right spin the section wheel (or move the highlight on
+// an open page), the middle one selects. Screen.tsx does the work.
 export default function App() {
   const [stats, setStats] = useState(randomStats)
-  // One-time intro on load (all CSS-timed); skipped for reduced motion.
-  const [intro, setIntro] = useState(() => !matchMedia('(prefers-reduced-motion: reduce)').matches)
-  const [selected, setSelected] = useState<number | null>(null)
-  const [command, setCommand] = useState<{ item: MenuItem | 'back'; n: number } | null>(null)
-  const send = (item: MenuItem | 'back') => setCommand((c) => ({ item, n: (c?.n ?? 0) + 1 }))
+  // Intro (all CSS-timed); see shouldPlayIntro for when it runs.
+  const [intro, setIntro] = useState(PLAY_INTRO)
+  const nav = useRef<((item: Nav) => void) | null>(null)
+  const send = (item: Nav) => nav.current?.(item)
 
   function onAction(a: Action) {
     const key = ACTION_STAT[a]
@@ -44,42 +76,16 @@ export default function App() {
   }
 
   const buttons = [
-    { id: 'a', label: 'Next menu item', press: () => setSelected((s) => (s === null ? 0 : (s + 1) % MENU.length)) },
-    { id: 'b', label: 'Select', press: () => selected !== null && send(MENU[selected].item) },
-    {
-      id: 'c',
-      label: 'Cancel',
-      press: () => {
-        setSelected(null)
-        send('back')
-      },
-    },
+    { id: 'a', label: 'Previous', press: () => send('left') },
+    { id: 'b', label: 'Select', press: () => send('select') },
+    { id: 'c', label: 'Next', press: () => send('right') },
   ]
 
   return (
     <main className="stage">
-      <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true" focusable="false">
-        <filter id="lcd-palette" colorInterpolationFilters="sRGB">
-          <feColorMatrix type="matrix" values="0.3 0.59 0.11 0 0  0.3 0.59 0.11 0 0  0.3 0.59 0.11 0 0  0 0 0 1 0" />
-          <feComponentTransfer>
-            <feFuncR type="discrete" tableValues={LCD_R} />
-            <feFuncG type="discrete" tableValues={LCD_G} />
-            <feFuncB type="discrete" tableValues={LCD_B} />
-          </feComponentTransfer>
-        </filter>
-      </svg>
       <div className={`device${intro ? ' is-intro' : ''}`}>
         <div className="shell" aria-hidden="true" />
-        <div className="sky" aria-hidden="true">
-          {DECOR.map(({ kind, s, t, c, delay, angle }, i) => (
-            <i
-              key={i}
-              className={`deco deco-${kind}`}
-              style={{ '--s': `${s}cqw`, '--t': `${t}s`, '--d': `${delay}s`, '--a': angle, '--c': c } as CSSProperties}
-              onAnimationIteration={(e) => e.currentTarget.style.setProperty('--a', randomAngle())}
-            />
-          ))}
-        </div>
+        <Sky />
         <div className="bezel" aria-hidden="true" />
         <header className="brand">
           <h1 className="brand-name">Kai Castro</h1>
@@ -107,7 +113,7 @@ export default function App() {
             </div>
           ))}
         <div className="screen">
-          <Screen stats={stats} selected={selected} command={command} onAction={onAction} />
+          <Screen stats={stats} navRef={nav} ready={!intro} onAction={onAction} />
           <div className="lcd-glass" aria-hidden="true" />
         </div>
         {buttons.map((b) => (

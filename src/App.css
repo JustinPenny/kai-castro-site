@@ -1,3 +1,22 @@
+/* Self-hosted fonts, cut down to what's used (OFL-licensed; subsets made with
+   fonttools' pyftsubset, see README). Logo fonts only contain the letters of
+   "Kai Castro" and "dj / producer": changing that text needs a new subset. */
+@font-face {
+  font-family: 'Bagel Fat One';
+  src: url(./assets/fonts/bagel-fat-one-logo.woff2) format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Silkscreen';
+  src: url(./assets/fonts/silkscreen-tagline.woff2) format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Press Start 2P';
+  src: url(./assets/fonts/press-start-2p.woff2) format('woff2');
+  font-display: swap;
+}
+
 /* The device is built from stacked layers, all positioned in % of the
    device box (752 x 912), so it scales as one piece:
    shell (blue) -> sky (drifting gold decorations) -> bezel -> logo, screen, buttons. */
@@ -79,20 +98,19 @@ body {
    Each piece starts small at the device's center and flies out at angle --a,
    growing as it goes. The sky is clipped to the egg,
    and the screen covers the middle, so they appear to burst out from behind it.
-   App.tsx picks a new random --a each time a piece loops. */
+   App.tsx picks a new random --a each time a piece loops.
+   Perf: the direction is a static rotate and the keyframes contain no
+   variables, so the browser can run every flight on the GPU. Keep it that way. */
 
 .deco {
-  --dist: 70cqw; /* just past the egg's edge */
-  --dx: cos(var(--a));
-  --dy: sin(var(--a));
   position: absolute;
   left: 50%;
   top: 50%;
   width: var(--s);
   aspect-ratio: 1;
-  transform: translate(-50%, -50%);
+  translate: -50% -50%;
   rotate: var(--a);
-  animation: fly var(--t) linear var(--d) infinite;
+  animation: fly var(--t) linear infinite;
 }
 
 /* A quick dash out from behind the screen (first 15% of the time), then a
@@ -108,10 +126,11 @@ body {
   mask-composite: exclude;
 }
 
+/* Outward along the piece's own (rotated) x axis, ending just past the egg's edge. */
 @keyframes fly {
-  from { translate: 0 0; scale: 0.4; }
-  15% { translate: calc(var(--dx) * var(--dist) * 0.45) calc(var(--dy) * var(--dist) * 0.45); scale: 0.6; }
-  to { translate: calc(var(--dx) * var(--dist)) calc(var(--dy) * var(--dist)); scale: 1; }
+  from { transform: translateX(0) scale(0.4); }
+  15% { transform: translateX(31.5cqw) scale(0.6); }
+  to { transform: translateX(70cqw) scale(1); }
 }
 
 .deco-sparkle {
@@ -238,6 +257,25 @@ body {
   outline: 0.6cqw solid var(--gold);
   outline-offset: 0.4cqw;
 }
+/* Printed symbols: left arrow, select ring, right arrow. */
+.hw-button::after {
+  content: '';
+  position: absolute;
+  inset: 30%;
+  background: #46669c;
+}
+.hw-a::after {
+  clip-path: polygon(78% 8%, 78% 92%, 12% 50%);
+}
+.hw-c::after {
+  clip-path: polygon(22% 8%, 22% 92%, 88% 50%);
+}
+.hw-b::after {
+  inset: 32%;
+  border-radius: 50%;
+  background: none;
+  border: 0.7cqw solid #46669c;
+}
 .hw-a { left: 30.85%; top: 86.73%; }
 .hw-b { left: 45.48%; top: 89.47%; }
 .hw-c { left: 60.11%; top: 86.73%; }
@@ -249,10 +287,14 @@ body {
   inset: 0;
   container-type: size;
   overflow: hidden;
+  /* LCD palette (darkest, mid, lightest), drawn directly: an SVG colour
+     filter here made every screen repaint re-run the filter on the CPU. */
+  --ink: #26301f;
+  --ink-2: #55663f;
+  --paper: #c8d4a0;
   background: var(--paper);
   color: var(--ink);
   font-family: var(--pixel);
-  filter: url(#lcd-palette);
 }
 
 .lcd button,
@@ -261,7 +303,7 @@ body {
   color: var(--ink);
 }
 
-/* Grid and glare sit on top, outside the palette filter. */
+/* LCD pixel grid and glare on top. */
 .lcd-glass {
   --px: 4px;
   position: absolute;
@@ -275,68 +317,147 @@ body {
   box-shadow: inset 0 0 20px 3px rgb(20 28 10 / 0.35);
 }
 
-.lcd-menu {
+.wheel {
+  --r: 33cqh; /* radius */
   position: absolute;
-  top: 2cqh;
-  left: 0;
-  right: 0;
+  inset: 0;
   margin: 0;
   padding: 0;
   list-style: none;
-  display: flex;
-  justify-content: center;
-  gap: 3cqw;
   z-index: 3;
 }
-
-.lcd-menu-item {
-  width: 11cqw;
-  height: 11cqw;
-  padding: 1cqw;
-  border: 0.8cqw solid transparent;
-  background: none;
-  cursor: pointer;
-  display: grid;
-  place-items: center;
-}
-.lcd-menu-item img,
-.lcd-menu-item svg {
-  width: 100%;
-  height: 100%;
-  image-rendering: pixelated;
-  fill: var(--ink);
-}
-.lcd-menu-item[aria-current],
-.lcd-menu-item:hover {
-  border-color: var(--ink);
-}
-
-.corner {
+/* Each slot is placed around the center at 90deg + (i + turn) * 90deg; the
+   item inside is turned back so the label always stays upright. */
+.wheel-slot {
+  --angle: calc(90deg + (var(--i) + var(--turn)) * 90deg);
   position: absolute;
-  z-index: 3;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  transform: rotate(var(--angle)) translateX(var(--r)) rotate(calc(-1 * var(--angle)));
+  transition:
+    transform 0.45s cubic-bezier(0.3, 1.3, 0.5, 1),
+    opacity 0.45s;
+}
+
+/* The selected option sits lower than the rest, near the screen's bottom edge. */
+.wheel-slot.is-current {
+  --r: 39cqh;
+}
+
+/* Tucked (4s after the last spin): the other options fade a little and slide
+   straight out past the screen's edge; the selected one stays put. */
+.wheel.is-tucked .wheel-slot:not(.is-current) {
+  --r: 75cqh;
+  opacity: 0.5;
+  pointer-events: none;
+  transition:
+    transform 0.7s cubic-bezier(0.5, 0, 0.75, 0),
+    opacity 0.7s;
+}
+
+.wheel-item {
+  display: block;
   padding: 1.8cqw 2.4cqw;
   border: 0.8cqw solid var(--ink);
   background: var(--paper);
   font-size: 3.4cqw;
+  white-space: nowrap;
   cursor: pointer;
+  transition: background 0.15s steps(1, end), color 0.15s steps(1, end), font-size 0.2s, padding 0.2s;
 }
-.corner:hover:not(:disabled) {
+.wheel-item:hover:not(:disabled) {
   background: var(--ink);
   color: var(--paper);
 }
-.corner:disabled {
+/* Slivers at the edges where tucked options went; hover or tap brings them back. */
+.wheel-peek {
+  position: absolute;
+  z-index: 4;
+  padding: 0;
+  border: none;
+  background: var(--ink);
+  cursor: pointer;
+  animation: peek-in 0.4s 0.5s both;
+}
+/* Bigger invisible hit area than the sliver itself. */
+.wheel-peek::before {
+  content: '';
+  position: absolute;
+  inset: -4cqw;
+}
+.wheel-peek-left,
+.wheel-peek-right {
+  top: 50%;
+  width: 1.2cqw;
+  height: 14cqh;
+  translate: 0 -50%;
+}
+.wheel-peek-left { left: 0; }
+.wheel-peek-right { right: 0; }
+.wheel-peek-top {
+  top: 0;
+  left: 50%;
+  width: 22cqw;
+  height: 1.2cqw;
+  translate: -50% 0;
+}
+@keyframes peek-in {
+  from { opacity: 0; }
+}
+
+/* The bottom of the wheel is the highlight: bigger, with arrow buttons either
+   side that spin the wheel like the device's left / right buttons. Sized with
+   font and padding (not scale) so the arrows can sit right next to it. */
+.wheel-slot {
+  display: flex;
+  align-items: center;
+  gap: 2cqw;
+}
+.wheel-item[aria-current] {
+  padding: 2.9cqw 3.8cqw;
+  border-width: 1.3cqw;
+  font-size: 5.4cqw;
+  background: var(--ink);
+  color: var(--paper);
+}
+.wheel-arrow {
+  position: relative;
+  width: 7.5cqw;
+  height: 12cqw;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+/* The triangle, drawn inside a larger click target. */
+.wheel-arrow::before {
+  content: '';
+  position: absolute;
+  inset: 1.5cqw 0.8cqw;
+  background: var(--ink);
+}
+.wheel-arrow-left::before {
+  clip-path: polygon(100% 0, 100% 100%, 0 50%);
+}
+.wheel-arrow-right::before {
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+.wheel-arrow:active::before {
+  scale: 0.85;
+}
+.wheel-arrow:disabled {
   cursor: default;
 }
-.corner-booking { top: 19cqh; left: 4cqw; }
-.corner-shows { top: 19cqh; right: 4cqw; }
-.corner-streams { bottom: 5cqh; left: 4cqw; }
-.corner-socials { bottom: 5cqh; right: 4cqw; }
+.wheel-item:disabled {
+  cursor: default;
+}
 
 .home,
 .buddy,
 .food {
   position: absolute;
-  top: 58%;
+  top: 50%;
   left: 50%;
 }
 .home,
@@ -405,26 +526,30 @@ body {
   opacity: 0;
 }
 
-/* Idle: bob every 650ms, blink on every 4th bob, caw on every 10th. */
+/* Idle: bob every 650ms, blink on every 4th bob, caw on every 10th. The
+   offsets live in the keyframes, not in animation-delay: Chrome needs extra
+   main-thread frames for animations with differing start times. */
 .buddy[data-pose='idle'] .buddy-body {
   animation: bob 1.3s steps(1, end) infinite;
 }
 .buddy[data-pose='idle'] .buddy-body::before {
-  animation: blink 5.2s steps(1, end) 3.9s infinite;
+  animation: blink 5.2s steps(1, end) infinite;
 }
 .buddy[data-pose='idle'] .buddy-body::after {
-  animation: caw 13s steps(1, end) 11.7s infinite;
+  animation: caw 13s steps(1, end) infinite;
 }
 @keyframes bob {
   50% { translate: 0 4%; }
 }
 @keyframes blink {
-  0% { opacity: 0; }
-  12.5% { opacity: 1; }
+  0% { opacity: 1; }
+  75% { opacity: 0; } /* 3.9s: 4th bob */
+  87.5% { opacity: 1; }
 }
 @keyframes caw {
-  0% { opacity: 1; }
-  5% { opacity: 0; }
+  0% { opacity: 0; }
+  90% { opacity: 1; } /* 11.7s: 10th bob */
+  95% { opacity: 0; }
 }
 
 .buddy[data-pose='flap'] .buddy-body {
@@ -441,8 +566,9 @@ body {
   opacity: 1;
 }
 
-/* Viewfinder brackets while hovering the buddy. */
-.buddy:hover:not(:disabled)::before {
+/* Viewfinder brackets while hovering or highlighting the buddy. */
+.buddy:hover:not(:disabled)::before,
+.buddy[data-hl]:not(:disabled)::before {
   --b: 0.8cqw;
   --l: 5cqw;
   --g: linear-gradient(var(--ink), var(--ink));
@@ -509,7 +635,8 @@ body {
   font-size: 3cqw;
   cursor: pointer;
 }
-.back-btn:hover {
+.back-btn:hover,
+.back-btn[data-hl] {
   background: var(--ink);
   color: var(--paper);
 }
@@ -538,13 +665,14 @@ body {
   border-bottom: 0.6cqw solid var(--ink);
   word-break: break-word;
 }
-.page-links a:hover {
+.page-links a:hover,
+.page-links a[data-hl] {
   background: var(--ink);
   color: var(--paper);
 }
 .panel-status {
   margin: 0;
-  opacity: 0.6;
+  color: var(--ink-2);
 }
 
 .stats {
