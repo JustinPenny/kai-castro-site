@@ -3,8 +3,7 @@ import pottyIcon from './assets/potty_icon.webp'
 import sleepIcon from './assets/sleep_icon.webp'
 import playIcon from './assets/play_icon.webp'
 
-// Site copy and links. Booking email is NOT here on purpose: the Worker hands
-// it out only after a Turnstile check (see worker/index.ts).
+// Site copy and links.
 
 export type SectionKey = 'booking' | 'shows' | 'streams' | 'socials'
 
@@ -12,7 +11,10 @@ export const SECTIONS: Record<SectionKey, { title: string; body: string; links: 
   booking: {
     title: 'Booking',
     body: 'Gigs, private events and press.',
-    links: [{ label: 'Press kit', href: '#' }], // placeholder: real press-kit URL
+    links: [
+      { label: 'kai@kaicastro.com', href: 'mailto:kai@kaicastro.com' },
+      { label: 'Press kit', href: '#' }, // placeholder: real press-kit URL
+    ],
   },
   shows: { title: 'Shows', body: '', links: [] }, // filled from Bandsintown
   streams: {

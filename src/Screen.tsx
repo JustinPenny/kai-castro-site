@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import Buddy from './Buddy'
-import BookingEmail from './BookingEmail'
 import { BANDSINTOWN_URL, useShows } from './bandsintown'
 import { SECTIONS, STAT_LABELS, type Action, type MenuItem, type SectionKey, type Stats } from './content'
 // Section wheel: item i sits at (90 + (i + turn) * 90) degrees, so the item
@@ -320,11 +319,6 @@ export default function Screen({
           <h2 className="page-title">{SECTIONS[section].title}</h2>
           {SECTIONS[section].body && <p className="page-body">{SECTIONS[section].body}</p>}
           <ul className="page-links">
-            {section === 'booking' && panelOpen && (
-              <li>
-                <BookingEmail />
-              </li>
-            )}
             {section === 'shows' ? (
               <>
                 {shows.status === 'loading' && <li className="panel-status">Loading dates...</li>}

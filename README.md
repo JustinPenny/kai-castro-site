@@ -1,14 +1,14 @@
 # Kai Castro site
 
 A virtual-pet handheld (styled after a starry navy Tamagotchi) with the site inside its LCD.
-React + Vite, deployed as a Cloudflare Worker with static assets.
+Preact + Vite, hosted on AWS Amplify.
 
 ## Develop
 
     npm install
-    npm run dev        # UI only; the booking email needs the Worker (use preview)
-    npm run preview    # build + `wrangler dev` (copy .dev.vars.example to .dev.vars first)
-    npm test           # Worker tests
+    npm run dev        # local dev server
+    npm run build      # production build into dist/
+    npm run preview    # serve dist/ locally
     npm run lint
 
 ## Controls
@@ -24,16 +24,14 @@ temporarily not selectable (`BUDDY_SELECTABLE` in `src/Screen.tsx`).
 The pet's Feed / Bathroom / Sleep / Play actions are still in `src/Screen.tsx` but have no
 controls right now; call `nav.current?.('feed')` in `src/App.tsx` to trigger one.
 
-## Deploy (Cloudflare)
+## Deploy (AWS Amplify)
 
-1. Create a Turnstile widget in the Cloudflare dashboard for your domain.
-2. `npx wrangler secret put TURNSTILE_SECRET` (the widget's secret key).
-3. Build with `VITE_TURNSTILE_SITE_KEY` (and `VITE_BANDSINTOWN_APP_ID`) set, e.g. in `.env`.
-4. `npm run deploy`.
+Merging into `main` triggers an Amplify build (`npm run build`, output `dist/`). Set
+`VITE_BANDSINTOWN_APP_ID` under the app's environment variables in the Amplify console.
 
-Security: `public/_headers` sets CSP, HSTS, frame-deny, nosniff, referrer and permissions policy on
-every asset. The booking email lives only in the Worker (`BOOKING_EMAIL` in `wrangler.jsonc`) and is
-returned from `POST /api/booking-email` only after the Turnstile token verifies.
+Security and caching headers live in `customHttp.yml` (CSP, HSTS, frame-deny, nosniff, referrer and
+permissions policy; a year of caching for `/assets/*`). Headers in that file override any set in
+the Amplify console. Check them after a deploy with `curl -I https://<your-domain>/`.
 
 ## Performance notes
 
@@ -44,7 +42,7 @@ returned from `POST /api/booking-email` only after the Turnstile token verifies.
 - The LCD palette is drawn with plain colours (`--ink`, `--ink-2`, `--paper` on `.lcd`), not a filter.
 - Fonts are subset to what's used (`src/assets/fonts`). To change the logo text, re-subset, e.g.
   `pyftsubset BagelFatOne.woff2 --text="Kai Castro" --flavor=woff2 --output-file=bagel-fat-one-logo.woff2`.
-- `/assets/*` is cached for a year (`public/_headers`); file names change whenever content does.
+- `/assets/*` is cached for a year (`customHttp.yml`); file names change whenever content does.
 - Show dates are fetched only once Shows is highlighted or opened.
 
 ## Art

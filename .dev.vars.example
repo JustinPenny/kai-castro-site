@@ -1,2 +1,0 @@
-# Copy to .dev.vars for `npm run preview`. This is Cloudflare's always-pass test secret.
-TURNSTILE_SECRET=1x0000000000000000000000000000000AA
