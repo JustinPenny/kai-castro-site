@@ -357,14 +357,20 @@ body {
   z-index: 3;
 }
 /* Each slot's position around the center is set inline by Screen.tsx (angle
-   and radius, WHEEL_R*), so the spin animates in every browser. */
+   and radius, WHEEL_R*), so the spin animates in every browser. A slot is a
+   zero-size point whose content is centred on it by flexbox, not by
+   translate(-50%): Safari runs the spin on the GPU with the -50% it measured
+   at the start, so a slot that grew or shrank mid-spin (arrows, font size)
+   landed off-centre and then snapped. */
 .wheel-slot {
   position: absolute;
   left: 50%;
   top: 50%;
-  translate: -50% -50%;
+  width: 0;
+  height: 0;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 2cqw;
   transition:
     transform 0.45s cubic-bezier(0.3, 1.3, 0.5, 1),
@@ -381,6 +387,9 @@ body {
     opacity 0.7s;
 }
 
+.wheel-slot > * {
+  flex-shrink: 0;
+}
 .wheel-item {
   display: block;
   padding: 1.8cqw 2.4cqw;
@@ -447,6 +456,9 @@ body {
 }
 .wheel-arrow {
   position: relative;
+  /* Fade in once the new selection has nearly arrived (it swings in from the
+     side, where an arrow would poke past the screen's edge). */
+  animation: peek-in 0.2s 0.2s backwards;
   width: 7.5cqw;
   height: 12cqw;
   padding: 0;
@@ -513,6 +525,11 @@ body {
 }
 .buddy:disabled {
   cursor: default;
+}
+/* Hidden under an open page: Safari drew his GPU layer over the page (his
+   feet poked out below the last link), and nothing needs him there. */
+.lcd:has(.lcd-page:not(.section), .lcd-page.is-open) .buddy {
+  visibility: hidden;
 }
 .buddy.is-left {
   --face: -1;
@@ -727,7 +744,9 @@ body {
    slideBox), the rest of the page waits, then fades in as it lands. */
 .lcd-page.section.is-open .page-body,
 .lcd-page.section.is-open .page-links {
-  animation: page-in 0.3s steps(3, end) 0.4s both;
+  /* backwards, not both: the end state is the normal style anyway, and Safari
+     left a held stepped opacity stuck on its first step (faint links). */
+  animation: page-in 0.3s steps(3, end) 0.4s backwards;
 }
 @media (prefers-reduced-motion: reduce) {
   .lcd-page.section.is-open .page-body,
