@@ -20,8 +20,25 @@
 :root {
   --paper: #fff;
   --ink: #0a0a0a;
-  --gold: #e2c06c;
-  --gold-fill: linear-gradient(135deg, #f1d58b, #c9a24c 50%, #9c7a30);
+  /* Palette, 60-30-10: background (dominant, ~60% of the view) is a calm,
+     desaturated deep version of the toy's blue so it recedes; the toy blue
+     (~30%) is the rich colour; gold (~10%) is the accent, on the hue the eye
+     sees as the blue's exact opposite, so it pops. Change a hue here to re-tint. */
+  --blue-h: 226;
+  --gold-h: 43; /* perceptual (OKLCH) opposite of --blue-h; HSL's wheel would say 46 */
+  --bg-centre: hsl(var(--blue-h) 38% 17%);
+  --bg-edge: hsl(var(--blue-h) 45% 6%);
+  --toy-light: hsl(var(--blue-h) 72% 56%);
+  --toy: hsl(var(--blue-h) 72% 41%);
+  --toy-shade: hsl(var(--blue-h) 75% 29%);
+  --toy-rim: hsl(var(--blue-h) 78% 19%);
+  --button-face: hsl(var(--blue-h) 65% 84%);
+  --button-edge: hsl(var(--blue-h) 38% 44%);
+  --gold: hsl(var(--gold-h) 70% 64%);
+  --gold-light: hsl(var(--gold-h) 78% 71%);
+  --gold-dot: hsl(var(--gold-h) 64% 60%);
+  --gold-shadow: hsl(var(--gold-h) 62% 24%);
+  --gold-fill: linear-gradient(135deg, hsl(var(--gold-h) 80% 76%), hsl(var(--gold-h) 62% 52%) 50%, hsl(var(--gold-h) 58% 37%));
   --egg: 50% 50% 50% 50% / 58% 58% 42% 42%;
   /* Logo box, in % of the device: the logo sits in it and the flying pieces
      are masked out of it. Unitless so the mask position can be derived. */
@@ -32,7 +49,7 @@
   --pixel: 'Press Start 2P', 'Courier New', monospace;
   font: 16px/1.45 system-ui, sans-serif;
   color-scheme: dark;
-  background: radial-gradient(ellipse at 50% 30%, #1b2766, #070b22 70%);
+  background: radial-gradient(ellipse at 50% 30%, var(--bg-centre), var(--bg-edge) 70%);
   min-height: 100%;
 }
 
@@ -79,22 +96,23 @@ body {
 }
 
 .shell {
-  background: radial-gradient(ellipse at 38% 28%, #3a6bdc, #1f3fae 45%, #132a80 85%, #0b1a5c);
+  /* Light spot sits below the logo so the gold logo is on deeper blue (contrast). */
+  background: radial-gradient(ellipse at 34% 46%, var(--toy-light), var(--toy) 45%, var(--toy-shade) 85%, var(--toy-rim));
   box-shadow:
     inset 0 0 0 0.4cqw rgb(255 255 255 / 0.22),
-    inset 0 -4cqw 8cqw rgb(5 12 53 / 0.55);
+    inset 0 -4cqw 8cqw hsl(var(--blue-h) 82% 11% / 0.55);
 }
 
-/* Glossy highlight on the plastic. */
+/* Glossy highlight on the plastic: on the left flank, clear of the logo. */
 .shell::after {
   content: '';
   position: absolute;
-  left: 11%;
-  top: 7%;
-  width: 34%;
-  height: 12%;
+  left: 4%;
+  top: 30%;
+  width: 9%;
+  height: 26%;
   border-radius: 50%;
-  rotate: -30deg;
+  rotate: 12deg;
   background: radial-gradient(closest-side, rgb(255 255 255 / 0.35), transparent);
 }
 
@@ -156,14 +174,14 @@ body {
 
 .deco-dot {
   border-radius: 50%;
-  background: #d8b35c;
+  background: var(--gold-dot);
 }
 
 /* A shooting-star streak: three gold lines along the direction of travel,
    fading toward the center (the tail). */
 .deco-stripes {
   aspect-ratio: 2.2;
-  background: repeating-linear-gradient(to bottom, #d8b35c 0 0.7cqw, transparent 0.7cqw 1.9cqw);
+  background: repeating-linear-gradient(to bottom, var(--gold-dot) 0 0.7cqw, transparent 0.7cqw 1.9cqw);
   mask: linear-gradient(to right, transparent, #000 35%);
   border-radius: 1cqw;
 }
@@ -190,7 +208,7 @@ body {
 /* Printed logo, where the toy says "Tamagotchi". */
 .brand {
   /* Dark-gold drop shadow under the wordmark and tagline. */
-  filter: drop-shadow(0 0.35cqw 0 #6e5216);
+  filter: drop-shadow(0 0.35cqw 0 var(--gold-shadow));
   position: absolute;
   left: calc(var(--brand-x) * 1%);
   top: calc(var(--brand-y) * 1%);
@@ -226,7 +244,8 @@ body {
   text-transform: uppercase;
   /* Tracking adds space after the last letter too; this re-centres the line. */
   margin-right: -0.4em;
-  color: var(--gold);
+  /* A lighter step of the gold: thin small text needs 4.5:1 on the shell. */
+  color: var(--gold-light);
 }
 
 /* The dark frame is the screen's own border. */
@@ -251,8 +270,8 @@ body {
   border: none;
   border-radius: 50%;
   cursor: pointer;
-  background: radial-gradient(circle at 38% 32%, #f4f9ff, #b4d2f2 55%, #7fa6d6);
-  box-shadow: 0 0.5cqw 0 #46669c, 0 0.9cqw 1.4cqw rgb(0 0 20 / 0.5);
+  background: radial-gradient(circle at 38% 32%, hsl(var(--blue-h) 100% 98%), var(--button-face) 55%, hsl(var(--blue-h) 52% 67%));
+  box-shadow: 0 0.5cqw 0 var(--button-edge), 0 0.9cqw 1.4cqw hsl(var(--blue-h) 80% 5% / 0.5);
 }
 /* Invisible bigger touch target. */
 .hw-button::before {
@@ -263,7 +282,7 @@ body {
 }
 .hw-button:active {
   translate: 0 0.5cqw;
-  box-shadow: 0 0 0 #46669c;
+  box-shadow: 0 0 0 var(--button-edge);
 }
 .hw-button:focus-visible {
   outline: 0.6cqw solid var(--gold);
@@ -274,7 +293,7 @@ body {
   content: '';
   position: absolute;
   inset: 30%;
-  background: #46669c;
+  background: var(--button-edge);
 }
 .hw-a::after {
   clip-path: polygon(78% 8%, 78% 92%, 12% 50%);
@@ -286,7 +305,7 @@ body {
   inset: 32%;
   border-radius: 50%;
   background: none;
-  border: 0.7cqw solid #46669c;
+  border: 0.7cqw solid var(--button-edge);
 }
 .hw-a { left: 30.85%; top: 86.73%; }
 .hw-b { left: 45.48%; top: 89.47%; }
@@ -302,7 +321,7 @@ body {
   /* LCD palette (darkest, mid, lightest), drawn directly: an SVG colour
      filter here made every screen repaint re-run the filter on the CPU. */
   --ink: #26301f;
-  --ink-2: #55663f;
+  --ink-2: #4a5837; /* 4.9:1 on --paper: readable small text, still lighter than --ink */
   --paper: #c8d4a0;
   background: var(--paper);
   color: var(--ink);
@@ -344,6 +363,9 @@ body {
   left: 50%;
   top: 50%;
   translate: -50% -50%;
+  display: flex;
+  align-items: center;
+  gap: 2cqw;
   transition:
     transform 0.45s cubic-bezier(0.3, 1.3, 0.5, 1),
     opacity 0.45s;
@@ -369,9 +391,13 @@ body {
   cursor: pointer;
   transition: background 0.15s steps(1, end), color 0.15s steps(1, end), font-size 0.2s, padding 0.2s;
 }
-.wheel-item:hover:not(:disabled) {
-  background: var(--ink);
-  color: var(--paper);
+@media (hover: hover) {
+  .wheel-item:hover:not(:disabled),
+  .back-btn:hover,
+  .page-links a:hover {
+    background: var(--ink);
+    color: var(--paper);
+  }
 }
 /* Slivers at the edges where tucked options went; hover or tap brings them back. */
 .wheel-peek {
@@ -412,11 +438,6 @@ body {
 /* The bottom of the wheel is the highlight: bigger, with arrow buttons either
    side that spin the wheel like the device's left / right buttons. Sized with
    font and padding (not scale) so the arrows can sit right next to it. */
-.wheel-slot {
-  display: flex;
-  align-items: center;
-  gap: 2cqw;
-}
 .wheel-item[aria-current] {
   padding: 2.9cqw 3.8cqw;
   border-width: 1.3cqw;
@@ -471,19 +492,24 @@ body {
   translate: -50% -50%;
 }
 
-/* ---------- Buddy (placeholder) ---------- */
+/* ---------- Buddy ---------- */
 
+/* All 18 frames are one sprite sheet (src/assets/buddy-sheet.webp: 128px
+   frames with 8px gaps, so 18 x 136px, in the LCD ink colour), decoded once,
+   so switching frames can never flash a blank. The sheet slides inside a
+   frame-sized window: frame n is translateX(-n/18 of the sheet). Literal
+   transforms (no variables, no background-position) keep these animations
+   on the GPU. Order: idle, down, blink, beak, flap, eat 1-2, potty 1-3,
+   sleep 1-5, fun 1-3. Screen.tsx sets the action poses. */
 .buddy {
+  --w: 28cqw; /* on-screen frame size */
   --face: 1;
   z-index: 5;
-  width: 28cqw;
+  width: var(--w);
   padding: 0;
   border: none;
   background: none;
   cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
 }
 .buddy:disabled {
   cursor: default;
@@ -491,87 +517,98 @@ body {
 .buddy.is-left {
   --face: -1;
 }
-/* Pose name under the blob. */
-.buddy::after {
-  content: attr(data-pose);
-  margin-top: 1cqw;
-  font-size: 3.4cqw;
-  white-space: nowrap;
-}
 
 .buddy-body {
-  position: relative;
+  display: block;
   width: 100%;
-  aspect-ratio: 12 / 10;
-  background: var(--ink);
-  border-radius: 45% 45% 30% 30% / 55% 55% 35% 35%;
+  aspect-ratio: 1;
+  overflow: hidden;
   scale: var(--face) 1;
 }
-/* Eyes. */
 .buddy-body::before {
   content: '';
-  position: absolute;
-  left: 30%;
-  top: 30%;
-  width: 40%;
-  height: 12%;
-  background: linear-gradient(to right, var(--paper) 0 22%, transparent 22% 78%, var(--paper) 78%);
-}
-/* Mouth, open only when cawing or eating. */
-.buddy-body::after {
-  content: '';
-  position: absolute;
-  left: 42%;
-  top: 55%;
-  width: 16%;
-  height: 12%;
-  background: var(--paper);
-  opacity: 0;
+  display: block;
+  width: calc(100% * 2448 / 128);
+  height: 100%;
+  background: url(./assets/buddy-sheet.webp) 0 0 / 100% 100%;
+  image-rendering: pixelated;
 }
 
-/* Idle: bob every 650ms, blink on every 4th bob, caw on every 10th. The
-   offsets live in the keyframes, not in animation-delay: Chrome needs extra
-   main-thread frames for animations with differing start times. */
-.buddy[data-pose='idle'] .buddy-body {
-  animation: bob 1.3s steps(1, end) infinite;
-}
+/* Idle: bob (up / down pose) every 650ms; the 4th bob blinks, the 10th opens
+   its beak. One 26s loop covers every combination. */
 .buddy[data-pose='idle'] .buddy-body::before {
-  animation: blink 5.2s steps(1, end) infinite;
+  animation: buddy-idle 26s steps(1, end) infinite;
 }
-.buddy[data-pose='idle'] .buddy-body::after {
-  animation: caw 13s steps(1, end) infinite;
-}
-@keyframes bob {
-  50% { translate: 0 4%; }
-}
-@keyframes blink {
-  0% { opacity: 1; }
-  75% { opacity: 0; } /* 3.9s: 4th bob */
-  87.5% { opacity: 1; }
-}
-@keyframes caw {
-  0% { opacity: 0; }
-  90% { opacity: 1; } /* 11.7s: 10th bob */
-  95% { opacity: 0; }
+@keyframes buddy-idle {
+  0% { transform: none; }
+  2.5% { transform: translateX(calc(-100% / 18)); }
+  5% { transform: none; }
+  7.5% { transform: translateX(calc(-100% / 18)); }
+  10% { transform: none; }
+  12.5% { transform: translateX(calc(-100% / 18)); }
+  15% { transform: translateX(calc(-200% / 18)); }
+  17.5% { transform: translateX(calc(-100% / 18)); }
+  20% { transform: none; }
+  22.5% { transform: translateX(calc(-100% / 18)); }
+  25% { transform: none; }
+  27.5% { transform: translateX(calc(-100% / 18)); }
+  30% { transform: none; }
+  32.5% { transform: translateX(calc(-100% / 18)); }
+  35% { transform: translateX(calc(-200% / 18)); }
+  37.5% { transform: translateX(calc(-100% / 18)); }
+  40% { transform: none; }
+  42.5% { transform: translateX(calc(-100% / 18)); }
+  45% { transform: translateX(calc(-300% / 18)); }
+  47.5% { transform: translateX(calc(-100% / 18)); }
+  50% { transform: none; }
+  52.5% { transform: translateX(calc(-100% / 18)); }
+  55% { transform: translateX(calc(-200% / 18)); }
+  57.5% { transform: translateX(calc(-100% / 18)); }
+  60% { transform: none; }
+  62.5% { transform: translateX(calc(-100% / 18)); }
+  65% { transform: none; }
+  67.5% { transform: translateX(calc(-100% / 18)); }
+  70% { transform: none; }
+  72.5% { transform: translateX(calc(-100% / 18)); }
+  75% { transform: translateX(calc(-200% / 18)); }
+  77.5% { transform: translateX(calc(-100% / 18)); }
+  80% { transform: none; }
+  82.5% { transform: translateX(calc(-100% / 18)); }
+  85% { transform: none; }
+  87.5% { transform: translateX(calc(-100% / 18)); }
+  90% { transform: none; }
+  92.5% { transform: translateX(calc(-100% / 18)); }
+  95% { transform: translateX(calc(-300% / 18)); }
+  97.5% { transform: translateX(calc(-100% / 18)); }
 }
 
-.buddy[data-pose='flap'] .buddy-body {
-  animation: flap 0.28s steps(1, end) infinite;
+/* Flying: wings up / down. */
+.buddy[data-pose='flap'] .buddy-body::before {
+  animation: buddy-flap 0.28s steps(1, end) infinite;
 }
-@keyframes flap {
-  50% { scale: var(--face) 0.82; }
+@keyframes buddy-flap {
+  0% { transform: translateX(calc(-400% / 18)); }
+  50% { transform: none; }
 }
 
-.buddy[data-pose^='sleep'] .buddy-body::before {
-  opacity: 0;
-}
-.buddy[data-pose^='eat'] .buddy-body::after {
-  opacity: 1;
-}
+/* Action poses. */
+.buddy[data-pose='eat 1'] .buddy-body::before { transform: translateX(calc(-500% / 18)); }
+.buddy[data-pose='eat 2'] .buddy-body::before { transform: translateX(calc(-600% / 18)); }
+.buddy[data-pose='potty 1'] .buddy-body::before { transform: translateX(calc(-700% / 18)); }
+.buddy[data-pose='potty 2'] .buddy-body::before { transform: translateX(calc(-800% / 18)); }
+.buddy[data-pose='potty 3'] .buddy-body::before { transform: translateX(calc(-900% / 18)); }
+.buddy[data-pose='sleep 1'] .buddy-body::before { transform: translateX(calc(-1000% / 18)); }
+.buddy[data-pose='sleep 2'] .buddy-body::before { transform: translateX(calc(-1100% / 18)); }
+.buddy[data-pose='sleep 3'] .buddy-body::before { transform: translateX(calc(-1200% / 18)); }
+.buddy[data-pose='sleep 4'] .buddy-body::before { transform: translateX(calc(-1300% / 18)); }
+.buddy[data-pose='sleep 5'] .buddy-body::before { transform: translateX(calc(-1400% / 18)); }
+.buddy[data-pose='fun 1'] .buddy-body::before { transform: translateX(calc(-1500% / 18)); }
+.buddy[data-pose='fun 2'] .buddy-body::before { transform: translateX(calc(-1600% / 18)); }
+.buddy[data-pose='fun 3'] .buddy-body::before { transform: translateX(calc(-1700% / 18)); }
 
 /* Viewfinder brackets while hovering or highlighting the buddy. */
-.buddy:hover:not(:disabled)::before,
-.buddy[data-hl]:not(:disabled)::before {
+.buddy:hover:not(:disabled)::after,
+.buddy[data-hl]:not(:disabled)::after {
   --b: 0.8cqw;
   --l: 5cqw;
   --g: linear-gradient(var(--ink), var(--ink));
@@ -639,7 +676,6 @@ body {
   font-size: 3cqw;
   cursor: pointer;
 }
-.back-btn:hover,
 .back-btn[data-hl] {
   background: var(--ink);
   color: var(--paper);
@@ -669,7 +705,6 @@ body {
   border-bottom: 0.6cqw solid var(--ink);
   word-break: break-word;
 }
-.page-links a:hover,
 .page-links a[data-hl] {
   background: var(--ink);
   color: var(--paper);
@@ -689,7 +724,7 @@ body {
   font-size: 3.6cqw;
 }
 /* While the selected wheel box slides up to become the title (Screen.tsx,
-   slideToTitle), the rest of the page waits, then fades in as it lands. */
+   slideBox), the rest of the page waits, then fades in as it lands. */
 .lcd-page.section.is-open .page-body,
 .lcd-page.section.is-open .page-links {
   animation: page-in 0.3s steps(3, end) 0.4s both;
@@ -817,9 +852,17 @@ body {
   background: #fff;
   animation:
     logo-in 0.6s ease-out both,
-    fill-black 0.7s ease-in-out 0.9s both,
     to-screen 1s cubic-bezier(0.65, 0, 0.35, 1) 1.9s both,
     blob-out 0.6s ease 2.9s forwards;
+}
+/* Its white fills in: a black layer fades in over the logo (same result as
+   animating the background colour, but opacity runs on the GPU). */
+.intro-blob::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #000;
+  animation: fill-black 0.7s ease-in-out 0.9s both;
 }
 .intro-blob img {
   display: block;
@@ -830,7 +873,7 @@ body {
   from { opacity: 0; scale: 0.85; }
 }
 @keyframes fill-black {
-  to { background: #000; }
+  from { opacity: 0; }
 }
 @keyframes to-screen {
   to { left: 21.81%; top: 31.58%; width: 56.38%; height: 45.39%; border-radius: 2.4cqw; }
@@ -839,29 +882,52 @@ body {
   to { opacity: 0; }
 }
 
-/* Each piece is a full copy of the shell clipped to one wedge from the center. */
+/* Each piece is a full copy of the shell clipped to one wedge from the center.
+   All four start together and run the whole intro (5.7s); each waits off-screen
+   inside its own keyframes until its turn (3.5s, 4.05s, 4.6s, 5.15s; 0.55s
+   each). Literal values and one start time keep them on the GPU. */
 .piece {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  animation: snap 0.55s var(--delay) both;
 }
-.piece-top { clip-path: polygon(0 0, 100% 0, 50% 50%); --delay: 3.5s; --fx: 0; --fy: -100vh; --bx: 0; --by: 0.8cqw; }
-.piece-right { clip-path: polygon(100% 0, 100% 100%, 50% 50%); --delay: 4.05s; --fx: 100vw; --fy: 0; --bx: -0.8cqw; --by: 0; }
-.piece-bottom { clip-path: polygon(100% 100%, 0 100%, 50% 50%); --delay: 4.6s; --fx: 0; --fy: 100vh; --bx: 0; --by: -0.8cqw; }
-.piece-left { clip-path: polygon(0 100%, 0 0, 50% 50%); --delay: 5.15s; --fx: -100vw; --fy: 0; --bx: 0.8cqw; --by: 0; }
+.piece-top { clip-path: polygon(0 0, 100% 0, 50% 50%); animation: snap-top 5.7s both; }
+.piece-right { clip-path: polygon(100% 0, 100% 100%, 50% 50%); animation: snap-right 5.7s both; }
+.piece-bottom { clip-path: polygon(100% 100%, 0 100%, 50% 50%); animation: snap-bottom 5.7s both; }
+.piece-left { clip-path: polygon(0 100%, 0 0, 50% 50%); animation: snap-left 5.7s both; }
 
 /* Magnetic: accelerates toward its spot, clicks past it a hair, settles. */
-@keyframes snap {
-  from { translate: var(--fx) var(--fy); animation-timing-function: cubic-bezier(0.6, 0, 1, 0.6); }
-  80% { translate: 0 0; animation-timing-function: ease-out; }
-  90% { translate: var(--bx) var(--by); animation-timing-function: ease-in; }
-  to { translate: 0 0; }
+@keyframes snap-top {
+  0%, 61.404% { translate: 0 -100vh; animation-timing-function: cubic-bezier(0.6, 0, 1, 0.6); }
+  69.123% { translate: 0 0; animation-timing-function: ease-out; }
+  70.088% { translate: 0 0.8cqw; animation-timing-function: ease-in; }
+  71.053%, 100% { translate: 0 0; }
+}
+@keyframes snap-right {
+  0%, 71.053% { translate: 100vw 0; animation-timing-function: cubic-bezier(0.6, 0, 1, 0.6); }
+  78.772% { translate: 0 0; animation-timing-function: ease-out; }
+  79.737% { translate: -0.8cqw 0; animation-timing-function: ease-in; }
+  80.702%, 100% { translate: 0 0; }
+}
+@keyframes snap-bottom {
+  0%, 80.702% { translate: 0 100vh; animation-timing-function: cubic-bezier(0.6, 0, 1, 0.6); }
+  88.421% { translate: 0 0; animation-timing-function: ease-out; }
+  89.386% { translate: 0 -0.8cqw; animation-timing-function: ease-in; }
+  90.351%, 100% { translate: 0 0; }
+}
+@keyframes snap-left {
+  0%, 90.351% { translate: -100vw 0; animation-timing-function: cubic-bezier(0.6, 0, 1, 0.6); }
+  98.070% { translate: 0 0; animation-timing-function: ease-out; }
+  99.035% { translate: 0.8cqw 0; animation-timing-function: ease-in; }
+  100% { translate: 0 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .buddy {
     transition: none !important;
+  }
+  .buddy-body::before {
+    animation: none !important;
   }
   .deco,
   .bezel {

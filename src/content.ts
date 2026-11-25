@@ -1,8 +1,3 @@
-import feedIcon from './assets/food_icon.webp'
-import pottyIcon from './assets/potty_icon.webp'
-import sleepIcon from './assets/sleep_icon.webp'
-import playIcon from './assets/play_icon.webp'
-
 // Site copy and links.
 
 export type SectionKey = 'booking' | 'shows' | 'streams' | 'socials'
@@ -39,13 +34,6 @@ export const SECTIONS: Record<SectionKey, { title: string; body: string; links: 
 
 export type Action = 'feed' | 'potty' | 'sleep' | 'play'
 export type MenuItem = Action | 'stats'
-export const MENU: { item: MenuItem; label: string; icon?: string }[] = [
-  { item: 'feed', label: 'Feed', icon: feedIcon },
-  { item: 'potty', label: 'Bathroom', icon: pottyIcon },
-  { item: 'sleep', label: 'Sleep', icon: sleepIcon },
-  { item: 'play', label: 'Play', icon: playIcon },
-  { item: 'stats', label: 'Status' },
-]
 
 export type StatKey = 'hunger' | 'fullness' | 'energy' | 'boredom'
 export type Stats = Record<StatKey, number>

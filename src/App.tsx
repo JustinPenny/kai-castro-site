@@ -24,8 +24,7 @@ const PIECES: Deco[] = [
 const DECOR = PIECES.map((d) => ({ ...d, angle: randomAngle() }))
 
 // The intro plays on the first load, then not again until INTRO_EVERY_MS has
-// passed since it last played (so refreshes skip it). Decided once per page
-// load at module level, so StrictMode's double render can't skip it in dev.
+// passed since it last played (so refreshes skip it). Decided once per page load.
 const INTRO_EVERY_MS = 10 * 60 * 1000
 const INTRO_KEY = 'kc-intro-played-at'
 function shouldPlayIntro() {

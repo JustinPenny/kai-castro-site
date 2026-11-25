@@ -1,7 +1,6 @@
-// PLACEHOLDER ART: a plain CSS blob that shows its pose name (App.css,
-// "Buddy"). Idle bob/blink/caw and the flap are CSS animations; Screen.tsx
-// sets the action poses (eat, potty, sleep, play). To add real frames, give
-// each [data-pose] a background image in App.css.
+// Buddy, the pixel-art bird. The sprite sheet and the idle / flap animations
+// live in App.css ("Buddy"); this sets the pose: an action pose from Screen.tsx (eat,
+// potty, sleep, play), otherwise flap while flying or idle.
 export default function Buddy({
   pose,
   flying,
