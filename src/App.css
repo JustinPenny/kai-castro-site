@@ -1,12 +1,4 @@
-/* Self-hosted fonts, cut down to what's used (OFL-licensed; subsets made with
-   fonttools' pyftsubset, see README). The tagline font only contains the
-   letters of "dj / producer": changing that text needs a new subset. */
-@font-face {
-  font-family: 'Manrope';
-  src: url(./assets/fonts/manrope-tagline.woff2) format('woff2');
-  font-weight: 300;
-  font-display: block;
-}
+/* Self-hosted pixel font (OFL-licensed, see README). */
 @font-face {
   font-family: 'Press Start 2P';
   src: url(./assets/fonts/press-start-2p.woff2) format('woff2');
@@ -39,13 +31,19 @@
   --gold-dot: hsl(var(--gold-h) 64% 60%);
   --gold-shadow: hsl(var(--gold-h) 62% 24%);
   --gold-fill: linear-gradient(135deg, hsl(var(--gold-h) 80% 76%), hsl(var(--gold-h) 62% 52%) 50%, hsl(var(--gold-h) 58% 37%));
+  /* Black and white for the flying pieces only (App.tsx picks gold, black or
+     white per piece), with the same light-to-dark sweep as the gold, tinted
+     a touch toward the blue so they sit in the palette. */
+  --white-fill: linear-gradient(135deg, #fff, hsl(var(--blue-h) 30% 93%) 50%, hsl(var(--blue-h) 20% 80%));
+  --black-fill: linear-gradient(135deg, hsl(var(--blue-h) 18% 28%), hsl(var(--blue-h) 25% 12%) 50%, hsl(var(--blue-h) 40% 4%));
   --egg: 50% 50% 50% 50% / 58% 58% 42% 42%;
   /* Logo box, in % of the device: the logo sits in it and the flying pieces
-     are masked out of it. Unitless so the mask position can be derived. */
+     are masked out of it. Unitless so the mask position can be derived.
+     Low enough that the egg is wide there: higher up its curve cut the K. */
   --brand-x: 19;
-  --brand-y: 8.5;
+  --brand-y: 13;
   --brand-w: 62;
-  --brand-h: 14;
+  --brand-h: 9;
   --pixel: 'Press Start 2P', 'Courier New', monospace;
   font: 16px/1.45 system-ui, sans-serif;
   color-scheme: dark;
@@ -116,27 +114,37 @@ body {
   background: radial-gradient(closest-side, rgb(255 255 255 / 0.35), transparent);
 }
 
-/* ---------- Sky: sparkles and gold pieces flying out of the center ----------
-   Each piece starts small at the device's center and flies out at angle --a,
-   growing as it goes. The sky is clipped to the egg,
-   and the screen covers the middle, so they appear to burst out from behind it.
-   App.tsx picks a new random --a each time a piece loops.
-   Perf: the direction is a static rotate and the keyframes contain no
-   variables, so the browser can run every flight on the GPU. Keep it that way. */
+/* ---------- Sky: a tunnel of sparkles and gold pieces ----------
+   An egg-shaped corridor (TUBE_* in App.tsx) runs back to a vanishing point
+   at the device's center, behind the screen. Pieces start there and fly
+   toward the viewer along its wall (or, sparkles, through the inside),
+   growing with perspective; the sky is clipped to the egg, so they rush past
+   its edges. App.tsx picks a new random spot (translate) as a piece loops.
+   Perf: the flight is one transform with no variables in its keyframes, so
+   the browser can run every flight on the GPU. Keep it that way. */
 
+.sky {
+  perspective: 40cqw;
+}
+
+/* Sparkles face the viewer; everything else lies flat against the wall
+   (.is-flat; its rotate is set in App.tsx). A flat
+   piece is tipped back 90deg, which turns its own y axis into the corridor's
+   depth, so it flies with translateY (fly-flat) instead of translateZ. One plain 3D transform per
+   piece, no nested 3D: nesting (preserve-3d) cost ~50ms/s of main thread on
+   a slowed-down phone. */
 .deco {
   position: absolute;
   left: 50%;
   top: 50%;
   width: var(--s);
   aspect-ratio: 1;
-  translate: -50% -50%;
-  rotate: var(--a);
-  animation: fly var(--t) linear infinite;
+  animation: fly calc(var(--t) * 4) linear infinite;
+}
+.deco.is-flat {
+  animation-name: fly-flat;
 }
 
-/* A quick dash out from behind the screen (first 15% of the time), then a
-   slow glide across the visible shell. */
 /* Cut the logo box out of the sky so pieces never cross the logo. */
 .sky {
   mask:
@@ -148,11 +156,51 @@ body {
   mask-composite: exclude;
 }
 
-/* Outward along the piece's own (rotated) x axis, ending just past the egg's edge. */
+/* One flight: out of the vanishing point fast while hidden behind the screen
+   (first quarter), then a slower run past the viewer (perspective still
+   speeds it up), ending past the egg's edge, short of the 40cqw perspective.
+   The last stretch fades out, so a piece that ends on the shell (sparkles deep
+   inside the corridor) doesn't pop.
+   Each loop holds four flights (each --t long): every loop boundary costs a
+   main-thread style update (~6ms on a slowed-down phone), so fewer is better.
+   A piece changes lane every four flights. */
 @keyframes fly {
-  from { transform: translateX(0) scale(0.4); }
-  15% { transform: translateX(31.5cqw) scale(0.6); }
-  to { transform: translateX(70cqw) scale(1); }
+  0% { transform: translateZ(-120cqw); opacity: 1; }
+  6.25% { transform: translateZ(-5cqw); }
+  23.5% { opacity: 1; }
+  24.99% { transform: translateZ(31cqw); opacity: 0; }
+  25% { transform: translateZ(-120cqw); opacity: 1; }
+  31.25% { transform: translateZ(-5cqw); }
+  48.5% { opacity: 1; }
+  49.99% { transform: translateZ(31cqw); opacity: 0; }
+  50% { transform: translateZ(-120cqw); opacity: 1; }
+  56.25% { transform: translateZ(-5cqw); }
+  73.5% { opacity: 1; }
+  74.99% { transform: translateZ(31cqw); opacity: 0; }
+  75% { transform: translateZ(-120cqw); opacity: 1; }
+  81.25% { transform: translateZ(-5cqw); }
+  98.5% { opacity: 1; }
+  99.99% { transform: translateZ(31cqw); opacity: 0; }
+  100% { transform: translateZ(31cqw); opacity: 0; }
+}
+@keyframes fly-flat {
+  0% { transform: translateY(-120cqw); opacity: 1; }
+  6.25% { transform: translateY(-5cqw); }
+  23.5% { opacity: 1; }
+  24.99% { transform: translateY(31cqw); opacity: 0; }
+  25% { transform: translateY(-120cqw); opacity: 1; }
+  31.25% { transform: translateY(-5cqw); }
+  48.5% { opacity: 1; }
+  49.99% { transform: translateY(31cqw); opacity: 0; }
+  50% { transform: translateY(-120cqw); opacity: 1; }
+  56.25% { transform: translateY(-5cqw); }
+  73.5% { opacity: 1; }
+  74.99% { transform: translateY(31cqw); opacity: 0; }
+  75% { transform: translateY(-120cqw); opacity: 1; }
+  81.25% { transform: translateY(-5cqw); }
+  98.5% { opacity: 1; }
+  99.99% { transform: translateY(31cqw); opacity: 0; }
+  100% { transform: translateY(31cqw); opacity: 0; }
 }
 
 .deco-sparkle {
@@ -162,52 +210,226 @@ body {
 }
 
 .deco-star {
-  background: var(--gold-fill);
+  background: var(--fill);
   clip-path: polygon(50% 2%, 63.2% 33.8%, 97.6% 36.5%, 71.4% 59%, 79.4% 92.5%, 50% 74.5%, 20.6% 92.5%, 28.6% 59%, 2.4% 36.5%, 36.8% 33.8%);
 }
 
 .deco-moon {
   border-radius: 50%;
-  background: var(--gold-fill);
+  background: var(--fill);
   mask: radial-gradient(circle at 74% 36%, transparent 43%, #000 44%);
 }
 
 .deco-dot {
   border-radius: 50%;
-  background: var(--gold-dot);
+  background: var(--fill);
 }
 
-/* A shooting-star streak: three gold lines along the direction of travel,
-   fading toward the center (the tail). */
-.deco-stripes {
-  aspect-ratio: 2.2;
-  background: repeating-linear-gradient(to bottom, var(--gold-dot) 0 0.7cqw, transparent 0.7cqw 1.9cqw);
-  mask: linear-gradient(to right, transparent, #000 35%);
-  border-radius: 1cqw;
+/* Markings on the wall: long in the direction of travel (flat, the height
+   runs along the corridor). */
+.deco-dash {
+  aspect-ratio: 1 / 3.5;
+  background: var(--fill);
+}
+
+/* Sheet-music symbols (drawn here as SVG masks, coloured gold by CSS), lying
+   on the wall like the stars. */
+.deco-quarter,
+.deco-eighth,
+.deco-beamed,
+.deco-half,
+.deco-sharp,
+.deco-flat,
+.deco-clef,
+.deco-whole,
+.deco-sixteenth,
+.deco-natural,
+.deco-rest,
+.deco-bass {
+  background: var(--fill);
+  mask: center / contain no-repeat;
+}
+/* quarter note */
+.deco-quarter {
+  aspect-ratio: 60 / 100;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 100'%3E%3Cellipse cx='24' cy='82' rx='16' ry='11' transform='rotate%28-22 24 82%29'/%3E%3Crect x='35' y='6' width='5.5' height='76'/%3E%3C/svg%3E");
+}
+/* eighth note */
+.deco-eighth {
+  aspect-ratio: 70 / 100;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 70 100'%3E%3Cellipse cx='24' cy='82' rx='16' ry='11' transform='rotate%28-22 24 82%29'/%3E%3Crect x='35' y='6' width='5.5' height='76'/%3E%3Cpath d='M40.5 6C42 24 66 30 60 56C58 42 52 36 40.5 34Z'/%3E%3C/svg%3E");
+}
+/* two beamed eighth notes */
+.deco-beamed {
+  aspect-ratio: 100 / 100;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cellipse cx='22' cy='84' rx='15' ry='10.5' transform='rotate%28-22 22 84%29'/%3E%3Cellipse cx='74' cy='74' rx='15' ry='10.5' transform='rotate%28-22 74 74%29'/%3E%3Crect x='32' y='16' width='5.5' height='68'/%3E%3Crect x='84' y='6' width='5.5' height='68'/%3E%3Cpath d='M32 16L89.5 6L89.5 17L32 27Z'/%3E%3C/svg%3E");
+}
+/* half note */
+.deco-half {
+  aspect-ratio: 60 / 100;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 100'%3E%3Cpath fill-rule='evenodd' d='M10 88C4 76 22 64 34 70C44 76 40 90 26 94C18 96 12 93 10 88ZM15 86C18 92 32 86 34 80C35 74 22 74 17 79C14 82 14 84 15 86Z'/%3E%3Crect x='35' y='6' width='5.5' height='70'/%3E%3C/svg%3E");
+}
+/* sharp */
+.deco-sharp {
+  aspect-ratio: 70 / 100;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 70 100'%3E%3Crect x='22' y='10' width='5' height='86'/%3E%3Crect x='42' y='4' width='5' height='86'/%3E%3Cpath d='M12 38L58 26L58 38L12 50ZM12 68L58 56L58 68L12 80Z'/%3E%3C/svg%3E");
+}
+/* flat */
+.deco-flat {
+  aspect-ratio: 60 / 100;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 100'%3E%3Crect x='14' y='2' width='5.5' height='94'/%3E%3Cpath d='M19.5 96C32 88 52 74 48 62C45 52 30 54 19.5 64L19.5 70C28 62 38 60 39 66C40 74 30 84 19.5 89Z'/%3E%3C/svg%3E");
+}
+/* treble clef */
+.deco-clef {
+  aspect-ratio: 70 / 120;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 70 120'%3E%3Cpath fill='none' stroke='black' stroke-width='6' stroke-linecap='round' d='M30 104C22 112 12 104 20 96C26 92 34 98 34 106L36 112L40 14C40 4 52 2 52 14C52 32 18 44 16 68C14 88 40 96 52 84C62 72 54 56 40 58C28 60 28 76 38 78'/%3E%3C/svg%3E");
+}
+
+/* whole note */
+.deco-whole {
+  aspect-ratio: 70 / 50;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 70 50'%3E%3Cpath fill-rule='evenodd' d='M35 8C56 8 66 17 66 25C66 34 56 42 35 42C14 42 4 34 4 25C4 17 14 8 35 8ZM29 15C23 17 24 25 28 31C32 37 39 37 41 33C43 28 41 21 37 17C35 15 32 14 29 15Z'/%3E%3C/svg%3E");
+}
+/* sixteenth note */
+.deco-sixteenth {
+  aspect-ratio: 70 / 100;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 70 100'%3E%3Cellipse cx='24' cy='82' rx='16' ry='11' transform='rotate%28-22 24 82%29'/%3E%3Crect x='35' y='6' width='5.5' height='76'/%3E%3Cpath d='M40.5 6C42 20 64 24 60 44C58 32 52 28 40.5 26ZM40.5 24C42 38 64 42 60 62C58 50 52 46 40.5 44Z'/%3E%3C/svg%3E");
+}
+/* natural */
+.deco-natural {
+  aspect-ratio: 50 / 100;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 100'%3E%3Crect x='12' y='4' width='5' height='70'/%3E%3Crect x='33' y='26' width='5' height='70'/%3E%3Cpath d='M12 38L38 30L38 42L12 50ZM12 64L38 56L38 68L12 76Z'/%3E%3C/svg%3E");
+}
+/* quarter rest */
+.deco-rest {
+  aspect-ratio: 50 / 100;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 100'%3E%3Cpath d='M18 4L36 26C28 34 26 42 34 52L38 56L32 54C22 52 18 60 26 72C16 66 12 54 24 48L16 38C24 30 26 22 18 12Z'/%3E%3C/svg%3E");
+}
+/* bass clef */
+.deco-bass {
+  aspect-ratio: 80 / 100;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 100'%3E%3Cpath fill='none' stroke='black' stroke-width='7' stroke-linecap='round' d='M10 34C10 18 24 10 36 12C50 14 56 28 52 44C46 64 28 80 8 90'/%3E%3Ccircle cx='14' cy='34' r='8'/%3E%3Ccircle cx='68' cy='24' r='5.5'/%3E%3Ccircle cx='68' cy='48' r='5.5'/%3E%3C/svg%3E");
+}
+
+/* A thin line and a swirly line, lying along the wall like the dashes. */
+.deco-line {
+  aspect-ratio: 1 / 16;
+  background: var(--fill);
+}
+.deco-swirl {
+  aspect-ratio: 40 / 160;
+  background: var(--fill);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 160'%3E%3Cpath fill='none' stroke='black' stroke-width='4' stroke-linecap='round' d='M20 158C20 128 6 118 10 98C14 78 34 82 33 64C32 46 9 52 9 36C9 20 30 22 30 10C30 6 27 3 24 2'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* An audio waveform lying along the wall like the dashes: time runs along the
+   corridor, the bars' width is the amplitude, packed solid. It pulses like a
+   live meter: its amplitude beats (scale across the bars) while two
+   different waveforms swap (the ::after fades in and out over the ::before).
+   Both loops hold 20 beats in 8s: every loop boundary costs a main-thread
+   update, so they're long; scale and opacity both run on the GPU. */
+.deco.deco-wave {
+  aspect-ratio: 20 / 120;
+  animation-name: fly-flat, wave-pulse;
+  animation-duration: calc(var(--t) * 4), 8s;
+}
+.deco-wave::before,
+.deco-wave::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--fill);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 120'%3E%3Crect x='5.5' y='0' width='9.1' height='2.05'/%3E%3Crect x='5.3' y='2' width='9.5' height='2.05'/%3E%3Crect x='6.9' y='4' width='6.3' height='2.05'/%3E%3Crect x='7.4' y='6' width='5.2' height='2.05'/%3E%3Crect x='7.4' y='8' width='5.3' height='2.05'/%3E%3Crect x='7.4' y='10' width='5.1' height='2.05'/%3E%3Crect x='6.2' y='12' width='7.5' height='2.05'/%3E%3Crect x='5.3' y='14' width='9.3' height='2.05'/%3E%3Crect x='4.3' y='16' width='11.4' height='2.05'/%3E%3Crect x='5.9' y='18' width='8.3' height='2.05'/%3E%3Crect x='4.8' y='20' width='10.4' height='2.05'/%3E%3Crect x='5.2' y='22' width='9.6' height='2.05'/%3E%3Crect x='2.1' y='24' width='15.7' height='2.05'/%3E%3Crect x='2.3' y='26' width='15.5' height='2.05'/%3E%3Crect x='4.7' y='28' width='10.6' height='2.05'/%3E%3Crect x='0.6' y='30' width='18.8' height='2.05'/%3E%3Crect x='0.6' y='32' width='18.9' height='2.05'/%3E%3Crect x='1.9' y='34' width='16.2' height='2.05'/%3E%3Crect x='2.1' y='36' width='15.7' height='2.05'/%3E%3Crect x='4.2' y='38' width='11.6' height='2.05'/%3E%3Crect x='5.0' y='40' width='10.1' height='2.05'/%3E%3Crect x='3.2' y='42' width='13.7' height='2.05'/%3E%3Crect x='5.3' y='44' width='9.5' height='2.05'/%3E%3Crect x='5.1' y='46' width='9.8' height='2.05'/%3E%3Crect x='5.3' y='48' width='9.4' height='2.05'/%3E%3Crect x='6.4' y='50' width='7.3' height='2.05'/%3E%3Crect x='5.7' y='52' width='8.7' height='2.05'/%3E%3Crect x='6.3' y='54' width='7.4' height='2.05'/%3E%3Crect x='6.1' y='56' width='7.8' height='2.05'/%3E%3Crect x='7.3' y='58' width='5.3' height='2.05'/%3E%3Crect x='7.3' y='60' width='5.3' height='2.05'/%3E%3Crect x='6.9' y='62' width='6.2' height='2.05'/%3E%3Crect x='6.0' y='64' width='8.1' height='2.05'/%3E%3Crect x='5.8' y='66' width='8.4' height='2.05'/%3E%3Crect x='5.8' y='68' width='8.4' height='2.05'/%3E%3Crect x='3.1' y='70' width='13.8' height='2.05'/%3E%3Crect x='2.5' y='72' width='15.1' height='2.05'/%3E%3Crect x='2.5' y='74' width='15.0' height='2.05'/%3E%3Crect x='2.6' y='76' width='14.9' height='2.05'/%3E%3Crect x='3.8' y='78' width='12.4' height='2.05'/%3E%3Crect x='4.0' y='80' width='12.1' height='2.05'/%3E%3Crect x='3.6' y='82' width='12.9' height='2.05'/%3E%3Crect x='4.4' y='84' width='11.1' height='2.05'/%3E%3Crect x='1.4' y='86' width='17.2' height='2.05'/%3E%3Crect x='3.1' y='88' width='13.9' height='2.05'/%3E%3Crect x='1.3' y='90' width='17.4' height='2.05'/%3E%3Crect x='3.4' y='92' width='13.1' height='2.05'/%3E%3Crect x='1.5' y='94' width='17.1' height='2.05'/%3E%3Crect x='2.3' y='96' width='15.4' height='2.05'/%3E%3Crect x='5.7' y='98' width='8.5' height='2.05'/%3E%3Crect x='5.4' y='100' width='9.2' height='2.05'/%3E%3Crect x='3.8' y='102' width='12.5' height='2.05'/%3E%3Crect x='5.6' y='104' width='8.8' height='2.05'/%3E%3Crect x='5.0' y='106' width='10.0' height='2.05'/%3E%3Crect x='6.9' y='108' width='6.2' height='2.05'/%3E%3Crect x='8.0' y='110' width='4.0' height='2.05'/%3E%3Crect x='7.4' y='112' width='5.2' height='2.05'/%3E%3Crect x='6.5' y='114' width='7.0' height='2.05'/%3E%3Crect x='6.8' y='116' width='6.3' height='2.05'/%3E%3Crect x='6.8' y='118' width='6.4' height='2.05'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+}
+.deco-wave::after {
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 120'%3E%3Crect x='1.1' y='0' width='17.7' height='2.05'/%3E%3Crect x='2.3' y='2' width='15.4' height='2.05'/%3E%3Crect x='5.1' y='4' width='9.8' height='2.05'/%3E%3Crect x='5.0' y='6' width='10.1' height='2.05'/%3E%3Crect x='5.8' y='8' width='8.4' height='2.05'/%3E%3Crect x='6.3' y='10' width='7.3' height='2.05'/%3E%3Crect x='4.9' y='12' width='10.3' height='2.05'/%3E%3Crect x='6.9' y='14' width='6.2' height='2.05'/%3E%3Crect x='6.7' y='16' width='6.6' height='2.05'/%3E%3Crect x='7.5' y='18' width='5.0' height='2.05'/%3E%3Crect x='7.9' y='20' width='4.2' height='2.05'/%3E%3Crect x='6.4' y='22' width='7.2' height='2.05'/%3E%3Crect x='7.0' y='24' width='5.9' height='2.05'/%3E%3Crect x='5.3' y='26' width='9.4' height='2.05'/%3E%3Crect x='6.2' y='28' width='7.6' height='2.05'/%3E%3Crect x='4.8' y='30' width='10.4' height='2.05'/%3E%3Crect x='5.1' y='32' width='9.8' height='2.05'/%3E%3Crect x='4.5' y='34' width='10.9' height='2.05'/%3E%3Crect x='1.5' y='36' width='17.0' height='2.05'/%3E%3Crect x='1.8' y='38' width='16.4' height='2.05'/%3E%3Crect x='3.6' y='40' width='12.8' height='2.05'/%3E%3Crect x='1.0' y='42' width='18.0' height='2.05'/%3E%3Crect x='3.8' y='44' width='12.4' height='2.05'/%3E%3Crect x='3.0' y='46' width='14.0' height='2.05'/%3E%3Crect x='1.1' y='48' width='17.8' height='2.05'/%3E%3Crect x='2.2' y='50' width='15.6' height='2.05'/%3E%3Crect x='4.6' y='52' width='10.8' height='2.05'/%3E%3Crect x='1.4' y='54' width='17.2' height='2.05'/%3E%3Crect x='4.7' y='56' width='10.6' height='2.05'/%3E%3Crect x='4.9' y='58' width='10.2' height='2.05'/%3E%3Crect x='3.6' y='60' width='12.7' height='2.05'/%3E%3Crect x='5.5' y='62' width='9.0' height='2.05'/%3E%3Crect x='6.1' y='64' width='7.8' height='2.05'/%3E%3Crect x='7.1' y='66' width='5.8' height='2.05'/%3E%3Crect x='7.5' y='68' width='4.9' height='2.05'/%3E%3Crect x='7.3' y='70' width='5.5' height='2.05'/%3E%3Crect x='7.9' y='72' width='4.2' height='2.05'/%3E%3Crect x='6.7' y='74' width='6.6' height='2.05'/%3E%3Crect x='6.6' y='76' width='6.9' height='2.05'/%3E%3Crect x='5.8' y='78' width='8.4' height='2.05'/%3E%3Crect x='3.8' y='80' width='12.3' height='2.05'/%3E%3Crect x='4.7' y='82' width='10.7' height='2.05'/%3E%3Crect x='3.9' y='84' width='12.2' height='2.05'/%3E%3Crect x='2.4' y='86' width='15.2' height='2.05'/%3E%3Crect x='4.6' y='88' width='10.8' height='2.05'/%3E%3Crect x='4.4' y='90' width='11.1' height='2.05'/%3E%3Crect x='1.1' y='92' width='17.8' height='2.05'/%3E%3Crect x='1.3' y='94' width='17.4' height='2.05'/%3E%3Crect x='3.7' y='96' width='12.7' height='2.05'/%3E%3Crect x='3.9' y='98' width='12.2' height='2.05'/%3E%3Crect x='1.6' y='100' width='16.8' height='2.05'/%3E%3Crect x='0.9' y='102' width='18.2' height='2.05'/%3E%3Crect x='4.2' y='104' width='11.6' height='2.05'/%3E%3Crect x='1.5' y='106' width='17.0' height='2.05'/%3E%3Crect x='2.2' y='108' width='15.6' height='2.05'/%3E%3Crect x='3.7' y='110' width='12.7' height='2.05'/%3E%3Crect x='4.7' y='112' width='10.6' height='2.05'/%3E%3Crect x='6.1' y='114' width='7.7' height='2.05'/%3E%3Crect x='6.7' y='116' width='6.5' height='2.05'/%3E%3Crect x='5.1' y='118' width='9.9' height='2.05'/%3E%3C/svg%3E");
+  animation: wave-swap 8s steps(1, end) infinite;
+}
+@keyframes wave-pulse {
+  0% { scale: 0.90 1; }
+  2.5% { scale: 0.63 1; }
+  5% { scale: 0.91 1; }
+  7.5% { scale: 0.66 1; }
+  10% { scale: 0.99 1; }
+  12.5% { scale: 0.52 1; }
+  15% { scale: 0.89 1; }
+  17.5% { scale: 0.63 1; }
+  20% { scale: 0.87 1; }
+  22.5% { scale: 0.51 1; }
+  25% { scale: 0.98 1; }
+  27.5% { scale: 0.66 1; }
+  30% { scale: 0.99 1; }
+  32.5% { scale: 0.52 1; }
+  35% { scale: 1.06 1; }
+  37.5% { scale: 0.50 1; }
+  40% { scale: 0.85 1; }
+  42.5% { scale: 0.52 1; }
+  45% { scale: 0.95 1; }
+  47.5% { scale: 0.47 1; }
+  50% { scale: 0.89 1; }
+  52.5% { scale: 0.54 1; }
+  55% { scale: 0.98 1; }
+  57.5% { scale: 0.48 1; }
+  60% { scale: 0.93 1; }
+  62.5% { scale: 0.67 1; }
+  65% { scale: 1.08 1; }
+  67.5% { scale: 0.61 1; }
+  70% { scale: 1.01 1; }
+  72.5% { scale: 0.60 1; }
+  75% { scale: 0.88 1; }
+  77.5% { scale: 0.46 1; }
+  80% { scale: 0.85 1; }
+  82.5% { scale: 0.68 1; }
+  85% { scale: 1.01 1; }
+  87.5% { scale: 0.69 1; }
+  90% { scale: 0.85 1; }
+  92.5% { scale: 0.61 1; }
+  95% { scale: 0.96 1; }
+  97.5% { scale: 0.63 1; }
+  100% { scale: 1 1; }
+}
+@keyframes wave-swap {
+  0% { opacity: 0; }
+  5% { opacity: 1; }
+  10% { opacity: 0; }
+  15% { opacity: 1; }
+  20% { opacity: 0; }
+  25% { opacity: 1; }
+  30% { opacity: 0; }
+  35% { opacity: 1; }
+  40% { opacity: 0; }
+  45% { opacity: 1; }
+  50% { opacity: 0; }
+  55% { opacity: 1; }
+  60% { opacity: 0; }
+  65% { opacity: 1; }
+  70% { opacity: 0; }
+  75% { opacity: 1; }
+  80% { opacity: 0; }
+  85% { opacity: 1; }
+  90% { opacity: 0; }
+  95% { opacity: 1; }
+  100% { opacity: 0; }
 }
 
 /* ---------- Bezel, logo, screen, buttons ---------- */
 
 .bezel {
+  /* Centred on the screen, sticking out past it 25% less than it used to
+     (the spikes' valleys now sit just clear of the screen's edge). */
   position: absolute;
-  left: 13.03%;
-  top: 25.66%;
-  width: 73.94%;
-  height: 57.46%;
+  left: 15.23%;
+  top: 27.17%;
+  width: 69.55%;
+  height: 54.44%;
   background: var(--gold-fill);
   clip-path: polygon(8.3% 6.5%, 20.9% 2.3%, 35.3% 7.3%, 50% 0%, 64.7% 7.3%, 79.1% 2.3%, 91.7% 6.5%, 97.1% 23.7%, 93.2% 38.9%, 100% 49.8%, 93.2% 60.7%, 97.1% 76%, 91.7% 93.1%, 79.1% 97.7%, 64.7% 92.7%, 50% 100%, 35.3% 92.7%, 20.9% 97.7%, 8.3% 93.1%, 2.9% 76%, 6.8% 60.7%, 0% 49.8%, 6.8% 38.9%, 2.9% 23.7%);
   pointer-events: none;
-  animation: wiggle 2.6s ease-in-out infinite;
-}
-
-@keyframes wiggle {
-  0%, 100% { rotate: -0.7deg; }
-  50% { rotate: 0.7deg; }
 }
 
 /* Printed logo, where the toy says "Tamagotchi". */
 .brand {
-  /* Dark-gold drop shadow under the wordmark and tagline. */
+  /* Dark-gold drop shadow under the wordmark. */
   filter: drop-shadow(0 0.35cqw 0 var(--gold-shadow));
   position: absolute;
   left: calc(var(--brand-x) * 1%);
@@ -226,26 +448,13 @@ body {
   /* The KAI CASTRO wordmark (redrawn from the poster as vector strokes), shown
      in gold through a mask. The heading's text stays for screen readers and
      search engines but isn't drawn. */
-  width: 56cqw;
+  width: 60cqw;
   aspect-ratio: 2875 / 420;
   margin: 0;
   background: var(--gold);
   mask: url(./assets/kai-castro-wordmark.svg) center / contain no-repeat;
   color: transparent;
   font-size: 0;
-}
-
-.brand-tag {
-  margin: 2cqw 0 0;
-  font-family: 'Manrope', sans-serif;
-  font-weight: 300;
-  font-size: 3cqw;
-  letter-spacing: 0.4em;
-  text-transform: uppercase;
-  /* Tracking adds space after the last letter too; this re-centres the line. */
-  margin-right: -0.4em;
-  /* A lighter step of the gold: thin small text needs 4.5:1 on the shell. */
-  color: var(--gold-light);
 }
 
 /* The dark frame is the screen's own border. */
@@ -351,6 +560,8 @@ body {
 .wheel {
   position: absolute;
   inset: 0;
+  /* Fades in when it mounts, e.g. swapping to buddy's wheel and back. */
+  animation: peek-in 0.3s steps(3, end);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -832,12 +1043,12 @@ body {
 }
 
 /* ---------- Intro (plays once on load) ----------
-   0.0s  logo appears in the center (the device center is the viewport center)
-   0.9s  its white fills in until it is a solid black disc
-   1.9s  the disc flows into the screen's exact box
-   2.9s  the screen switches on under it and the blob fades away
-   3.5s  shell pieces snap in clockwise: top, right, bottom, left (0.55s each)
-   5.7s  App.tsx swaps the pieces for the real shell (they line up exactly) */
+   0.0s    logo appears in the center (the device center is the viewport center)
+   0.675s  its white fills in until it is a solid black disc
+   1.425s  the disc flows into the screen's exact box
+   2.175s  the screen switches on under it and the blob fades away
+   2.625s  shell pieces snap in clockwise: top, right, bottom, left (0.4125s each)
+   4.275s  App.tsx swaps the pieces for the real shell (they line up exactly) */
 
 .is-intro > .shell,
 .is-intro > .bezel,
@@ -853,7 +1064,7 @@ body {
 }
 .is-intro > .screen {
   visibility: hidden;
-  animation: switch-on 0s 2.9s forwards;
+  animation: switch-on 0s 2.175s forwards;
 }
 @keyframes switch-on {
   to { visibility: visible; }
@@ -870,9 +1081,9 @@ body {
   overflow: hidden;
   background: #fff;
   animation:
-    logo-in 0.6s ease-out both,
-    to-screen 1s cubic-bezier(0.65, 0, 0.35, 1) 1.9s both,
-    blob-out 0.6s ease 2.9s forwards;
+    logo-in 0.45s ease-out both,
+    to-screen 0.75s cubic-bezier(0.65, 0, 0.35, 1) 1.425s both,
+    blob-out 0.45s ease 2.175s forwards;
 }
 /* Its white fills in: a black layer fades in over the logo (same result as
    animating the background colour, but opacity runs on the GPU). */
@@ -881,7 +1092,7 @@ body {
   position: absolute;
   inset: 0;
   background: #000;
-  animation: fill-black 0.7s ease-in-out 0.9s both;
+  animation: fill-black 0.525s ease-in-out 0.675s both;
 }
 .intro-blob img {
   display: block;
@@ -902,18 +1113,19 @@ body {
 }
 
 /* Each piece is a full copy of the shell clipped to one wedge from the center.
-   All four start together and run the whole intro (5.7s); each waits off-screen
-   inside its own keyframes until its turn (3.5s, 4.05s, 4.6s, 5.15s; 0.55s
-   each). Literal values and one start time keep them on the GPU. */
+   All four start together and run the whole intro (4.275s); each waits
+   off-screen inside its own keyframes until its turn (2.625s, 3.0375s, 3.45s,
+   3.8625s; 0.4125s each; the percentages below are of the whole intro, so
+   only the 4.275s needs changing to retime it). Literal values and one start time keep them on the GPU. */
 .piece {
   position: absolute;
   inset: 0;
   pointer-events: none;
 }
-.piece-top { clip-path: polygon(0 0, 100% 0, 50% 50%); animation: snap-top 5.7s both; }
-.piece-right { clip-path: polygon(100% 0, 100% 100%, 50% 50%); animation: snap-right 5.7s both; }
-.piece-bottom { clip-path: polygon(100% 100%, 0 100%, 50% 50%); animation: snap-bottom 5.7s both; }
-.piece-left { clip-path: polygon(0 100%, 0 0, 50% 50%); animation: snap-left 5.7s both; }
+.piece-top { clip-path: polygon(0 0, 100% 0, 50% 50%); animation: snap-top 4.275s both; }
+.piece-right { clip-path: polygon(100% 0, 100% 100%, 50% 50%); animation: snap-right 4.275s both; }
+.piece-bottom { clip-path: polygon(100% 100%, 0 100%, 50% 50%); animation: snap-bottom 4.275s both; }
+.piece-left { clip-path: polygon(0 100%, 0 0, 50% 50%); animation: snap-left 4.275s both; }
 
 /* Magnetic: accelerates toward its spot, clicks past it a hair, settles. */
 @keyframes snap-top {
@@ -949,7 +1161,7 @@ body {
     animation: none !important;
   }
   .deco,
-  .bezel {
+  .deco-wave::after {
     animation-play-state: paused;
   }
 }

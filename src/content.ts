@@ -8,7 +8,7 @@ export const SECTIONS: Record<SectionKey, { title: string; body: string; links: 
     body: 'Gigs, private events and press.',
     links: [
       { label: 'kai@kaicastro.com', href: 'mailto:kai@kaicastro.com' },
-      { label: 'Press kit', href: '#' }, // placeholder: real press-kit URL
+      { label: 'Press kit', href: 'https://drive.google.com/file/d/1vwyxz2aGtVpxjflLHIOA71oqDr1E0Ke0/view' },
     ],
   },
   shows: { title: 'Shows', body: '', links: [] }, // filled from Bandsintown

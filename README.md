@@ -18,8 +18,12 @@ arrows either side that spin the wheel like the device's left / right buttons). 
 tapping the slivers left at the screen's edges, brings them back (`WHEEL_TUCK_MS` in `src/Screen.tsx`). The left and right
 buttons spin the wheel, and the middle button opens the highlighted section. Clicking a section
 spins it to the bottom (or opens it if it's already there). On an open page, left and right move
-a highlight over the back button and links, and the middle button selects it. The pet is
-temporarily not selectable (`BUDDY_SELECTABLE` in `src/Screen.tsx`).
+a highlight over the back button and links, and the middle button selects it. The keyboard's
+left / right arrow keys and sideways swipes work like the left / right buttons (a swipe left brings
+the next option in).
+
+Clicking the pet swaps the section wheel for its own wheel of actions: Feed, Sleep, Potty and Play,
+driven the same way. For now, clicking the pet again goes back to the sections.
 
 The pet's Feed / Bathroom / Sleep / Play actions are still in `src/Screen.tsx` but have no
 controls right now; call `nav.current?.('feed')` in `src/App.tsx` to trigger one.
@@ -42,8 +46,7 @@ the Amplify console. Check them after a deploy with `curl -I https://<your-domai
 - Buddy's frames are switched with `transform` on the sprite sheet, not `background-position`
   (which restyles every frame on the main thread: ~140 ms/s on a throttled phone).
 - The LCD palette is drawn with plain colours (`--ink`, `--ink-2`, `--paper` on `.lcd`), not a filter.
-- Fonts are subset to what's used (`src/assets/fonts`). To change the tagline text, re-subset, e.g.
-  `pyftsubset manrope-latin-300-normal.woff2 --text="DJ/PRODUCER dj/producer" --flavor=woff2 --output-file=manrope-tagline.woff2`.
+- The only font file is the LCD's pixel font (`src/assets/fonts`); the logo is an SVG.
 - `/assets/*` is cached for a year (`customHttp.yml`); file names change whenever content does.
 - Show dates are fetched only once Shows is highlighted or opened.
 

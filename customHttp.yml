@@ -4,7 +4,7 @@ customHeaders:
   - pattern: '**/*'
     headers:
       - key: 'Content-Security-Policy'
-        value: "default-src 'self'; connect-src 'self' https://rest.bandsintown.com; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+        value: "default-src 'self'; connect-src 'self' https://rest.bandsintown.com; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
       - key: 'Strict-Transport-Security'
         value: 'max-age=31536000; includeSubDomains'
       - key: 'X-Content-Type-Options'

@@ -9,6 +9,7 @@ export default function Buddy({
   facingLeft,
   durationMs,
   disabled,
+  selected,
   onClick,
 }: {
   pose: string | null // an action pose, or null for idle/flap
@@ -18,6 +19,7 @@ export default function Buddy({
   facingLeft: boolean
   durationMs: number
   disabled: boolean
+  selected: boolean // his wheel is showing: viewfinder brackets on him
   onClick: () => void
 }) {
   return (
@@ -25,7 +27,9 @@ export default function Buddy({
       type="button"
       className={`buddy${facingLeft ? ' is-left' : ''}`}
       data-pose={pose ?? (flying ? 'flap' : 'idle')}
-      aria-label="Status"
+      aria-label={selected ? 'Back to sections' : "Buddy's actions"}
+      aria-pressed={selected}
+      data-hl={selected ? '' : undefined}
       disabled={disabled}
       onClick={onClick}
       style={{
