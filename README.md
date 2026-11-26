@@ -22,11 +22,8 @@ a highlight over the back button and links, and the middle button selects it. Th
 left / right arrow keys and sideways swipes work like the left / right buttons (a swipe left brings
 the next option in).
 
-Clicking the pet swaps the section wheel for its own wheel of actions: Feed, Sleep, Potty and Play,
-driven the same way. For now, clicking the pet again goes back to the sections.
-
-The pet's Feed / Bathroom / Sleep / Play actions are still in `src/Screen.tsx` but have no
-controls right now; call `nav.current?.('feed')` in `src/App.tsx` to trigger one.
+Clicking the pet flips the wheel's boxes over like cards: its actions (Feed, Sleep, Potty, Play)
+are on their backs, driven the same way. For now, clicking the pet again flips them back.
 
 ## Deploy (AWS Amplify)
 

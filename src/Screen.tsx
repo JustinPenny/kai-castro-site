@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Buddy from './Buddy'
 import { BANDSINTOWN_URL, useShows } from './bandsintown'
-import { SECTIONS, STAT_LABELS, type Action, type MenuItem, type SectionKey, type Stats } from './content'
+import { SECTIONS, type Action, type SectionKey } from './content'
 // Section wheel: item i sits at (90 + (i + turn) * 90) degrees, so the item
 // with (i + turn) % 4 === 0 is at the bottom, which is the highlight.
 // Spinning right (turn + 1) brings the item on the right down into it.
@@ -14,18 +14,21 @@ const WHEEL_R_CURRENT = 39
 const WHEEL_R_TUCKED = 75
 // Shows starts highlighted: the turn that puts it at the bottom.
 const START_TURN = -WHEEL.indexOf('shows')
-// Buddy's wheel (clicking him swaps it in): his actions, laid out the same way.
-const PET_WHEEL: Action[] = ['feed', 'sleep', 'potty', 'play']
+// Buddy's wheel: his actions, printed on the backs of the section boxes
+// (PET_WHEEL[i] behind WHEEL[i]); clicking him flips the boxes over.
+// Rotated so Feed is behind Shows, the box highlighted at the start.
+const PET_WHEEL: Action[] = ['play', 'feed', 'sleep', 'potty']
 const PET_LABELS: Record<Action, string> = { feed: 'Feed', sleep: 'Sleep', potty: 'Potty', play: 'Play' }
 type Menu = 'sections' | 'pet'
 
 // Device buttons (plus arrow keys and swipes, see App.tsx), and the pet
 // actions by name.
-export type Nav = 'left' | 'right' | 'select' | 'back' | MenuItem
+export type Nav = 'left' | 'right' | 'select' | 'back' | Action
 
-// Links that leave the site open in a new tab (mailto: and # links don't).
+// Links that leave the toy (other sites, and files like the press kit) open in
+// a new tab; mailto: links don't.
 const external = (href: string) =>
-  /^https?:/.test(href) ? { target: '_blank', rel: 'noopener noreferrer' } : {}
+  /^(https?:|\/)/.test(href) ? { target: '_blank', rel: 'noopener noreferrer' } : {}
 
 // An open page's highlightable items: its back button and links.
 const pageItems = (page: Element) => [...page.querySelectorAll<HTMLElement>('button:not(:disabled), a[href]')]
@@ -46,18 +49,14 @@ const centerOf = (el: Element) => {
 }
 
 export default function Screen({
-  stats,
   navRef,
   ready,
-  onAction,
 }: {
-  stats: Stats
   // Screen puts its handler here; App's device buttons call it directly, so
   // every press is handled even when several land before the next render.
   navRef: { current: ((item: Nav) => void) | null }
   // False while the intro plays, so the wheel doesn't tuck away before anyone sees it.
   ready: boolean
-  onAction: (a: Action) => void
 }) {
   const [pos, setPos] = useState({ x: 0, y: 0 })
   const [facingLeft, setFacingLeft] = useState(false)
@@ -66,14 +65,13 @@ export default function Screen({
   const [foods, setFoods] = useState<{ id: number; x: number; y: number }[]>([])
   const [section, setSection] = useState<SectionKey | null>(null)
   const [panelOpen, setPanelOpen] = useState(false)
-  const [statsOpen, setStatsOpen] = useState(false)
   const [acting, setActing] = useState(false)
   // Which wheel shows, and each wheel's own turn.
   const [menu, setMenu] = useState<Menu>('sections')
-  const [turns, setTurns] = useState({ sections: START_TURN, pet: 0 })
-  const turnRef = useRef({ ...turns }) // latest turns, even between quick presses
-  const turn = turns[menu]
-  const highlighted = WHEEL[mod4(-turns.sections)]
+  // One turn for both sides of the wheel: flipping keeps every box in place.
+  const [turn, setTurn] = useState(START_TURN)
+  const turnRef = useRef(START_TURN) // latest turn, even between quick presses
+  const highlighted = WHEEL[mod4(-turn)]
   // After WHEEL_TUCK_MS without a spin, the other options slide off the screen
   // (App.css, .wheel.is-tucked); a spin brings them back and restarts the clock.
   // While tucked, slivers at the edges bring the options back on hover or tap,
@@ -87,8 +85,8 @@ export default function Screen({
   }, [ready, tucked, hold, turn, menu])
   const untuck = () => setTucked(false)
   const spin = (by: number) => {
-    turnRef.current[menu] += by
-    setTurns({ ...turnRef.current })
+    turnRef.current += by
+    setTurn(turnRef.current)
     setTucked(false)
   }
   const shows = useShows(highlighted === 'shows' || section === 'shows')
@@ -108,7 +106,7 @@ export default function Screen({
     }
   }, [])
 
-  const blocked = flying || panelOpen || statsOpen || acting
+  const blocked = flying || panelOpen || acting
 
   function flyTo(x: number, y: number) {
     if (x - posRef.current.x > 2) setFacingLeft(false)
@@ -120,10 +118,9 @@ export default function Screen({
   }
 
   async function run(action: Action) {
-    if (busy.current || panelOpen || statsOpen || flying) return
+    if (busy.current || panelOpen || flying) return
     busy.current = true
     setActing(true)
-    onAction(action)
     if (action === 'feed') await feed()
     else {
       for (const p of SEQUENCES[action].poses) {
@@ -241,33 +238,24 @@ export default function Screen({
       })
   }
 
-  function openStats() {
-    if (!blocked) setStatsOpen(true)
-  }
-
-  // Clicking buddy swaps the wheel between the sections and his actions; for
-  // now, clicking him again is the way back.
+  // Clicking buddy flips the wheel's boxes over between the sections and his
+  // actions (App.css, .wheel.is-flipped); for now, clicking him again is the
+  // way back.
   function toggleMenu() {
     if (blocked) return
     setMenu((m) => (m === 'sections' ? 'pet' : 'sections'))
     setTucked(false)
   }
 
-  // The highlighted wheel option: open a section, or do one of buddy's actions.
-  function choose(key: string) {
-    if (menu === 'sections') void goTo(key as SectionKey)
-    else void run(key as Action)
-  }
-
-  function closeStats() {
-    setStatsOpen(false)
-    setTucked(false)
+  // Choose the box at place i: open its section, or do the action on its back.
+  function choose(i: number) {
+    if (menu === 'sections') void goTo(WHEEL[i])
+    else void run(PET_WHEEL[i])
   }
 
   // Back to the main screen, with every wheel option showing again.
   async function back() {
-    if (statsOpen) return closeStats()
-    if (!panelOpen && menu === 'pet' && !blocked) return setMenu('sections')
+    if (!panelOpen && menu === 'pet') return toggleMenu()
     if (!panelOpen || flying) return
     // Reverse slide: the title drops back down into the wheel's selected box
     // while the page fades out and the pet flies home.
@@ -295,27 +283,26 @@ export default function Screen({
   // A page opens with its bottom-most item highlighted, so select works
   // straight away. Re-runs when show dates arrive, since the list changes then.
   useEffect(() => {
-    const page = (panelOpen || statsOpen) && screenRef.current?.querySelector('.lcd-page:not(.section), .lcd-page.is-open')
+    const page = panelOpen && screenRef.current?.querySelector('.lcd-page.is-open')
     if (!page) return
     const items = pageItems(page)
     items.forEach((el) => el.removeAttribute('data-hl'))
     const last = items.at(-1)
     last?.setAttribute('data-hl', '')
     last?.scrollIntoView({ block: 'nearest' }) // only moves a long Shows list
-  }, [panelOpen, statsOpen, section, shows.status, shows.shows.length])
+  }, [panelOpen, section, shows.status, shows.shows.length])
 
   // Device buttons (and, later, pet actions) come in here.
   const nav = (item: Nav) => {
-    const page = screenRef.current?.querySelector('.lcd-page:not(.section), .lcd-page.is-open')
+    const page = screenRef.current?.querySelector('.lcd-page.is-open')
     if (item === 'left' || item === 'right') {
       const dir = item === 'right' ? 1 : -1
       if (page) stepPage(page, dir)
       else if (!blocked) spin(dir)
     } else if (item === 'select') {
       if (page) pageItems(page).find((el) => el.hasAttribute('data-hl'))?.click()
-      else if (!blocked) choose((menu === 'sections' ? WHEEL : PET_WHEEL)[mod4(-turnRef.current[menu])])
+      else if (!blocked) choose(mod4(-turnRef.current))
     } else if (item === 'back') void back()
-    else if (item === 'stats') openStats()
     else void run(item)
   }
   navRef.current = nav
@@ -334,9 +321,11 @@ export default function Screen({
       className="lcd"
       onClick={handleClick}
     >
-      {/* Keyed by menu, so swapping wheels remounts it (and fades it in). */}
-      <ul key={menu} className={`wheel${tucked ? ' is-tucked' : ''}`} aria-label={menu === 'sections' ? 'Sections' : "Buddy's actions"}>
-        {(menu === 'sections' ? WHEEL : PET_WHEEL).map((key, i) => {
+      <ul
+        className={`wheel${tucked ? ' is-tucked' : ''}${menu === 'pet' ? ' is-flipped' : ''}`}
+        aria-label={menu === 'sections' ? 'Sections' : "Buddy's actions"}
+      >
+        {WHEEL.map((key, i) => {
           const at = mod4(i + turn) // 0 bottom, 1 left, 2 top, 3 right
           // Around the center at 90deg + (i + turn) * 90deg, then turned back so
           // the label stays upright. Plain values, no CSS variables: Safari
@@ -365,13 +354,19 @@ export default function Screen({
                 className="wheel-item"
                 aria-current={at === 0 ? 'true' : undefined}
                 ref={(el) => {
-                  if (el && menu === 'sections') itemRefs.current[key as SectionKey] = el
+                  if (el) itemRefs.current[key] = el
                 }}
                 disabled={blocked}
                 // Clicking the highlighted item chooses it; any other spins it down.
-                onClick={() => (at === 0 ? choose(key) : spin(at === 3 ? 1 : -at))}
+                onClick={() => (at === 0 ? choose(i) : spin(at === 3 ? 1 : -at))}
               >
-                {menu === 'sections' ? SECTIONS[key as SectionKey].title : PET_LABELS[key as Action]}
+                {/* Two sides of one card: the section, and buddy's action on the back. */}
+                <span className="wheel-face" aria-hidden={menu === 'pet'}>
+                  {SECTIONS[key].title}
+                </span>
+                <span className="wheel-face wheel-back" aria-hidden={menu === 'sections'}>
+                  {PET_LABELS[PET_WHEEL[i]]}
+                </span>
               </button>
               {at === 0 && (
                 <button
@@ -415,25 +410,6 @@ export default function Screen({
         selected={menu === 'pet'}
         onClick={toggleMenu}
       />
-
-      {statsOpen && (
-        <div className="lcd-page">
-          <button type="button" className="back-btn" onClick={closeStats}>
-            &lt; back
-          </button>
-          <h2 className="page-title">Status</h2>
-          <ul className="stats">
-            {(Object.keys(STAT_LABELS) as (keyof Stats)[]).map((k) => (
-              <li key={k}>
-                <span>{STAT_LABELS[k]}</span>
-                <div className="stat-bar" role="progressbar" aria-label={STAT_LABELS[k]} aria-valuemin={0} aria-valuemax={100} aria-valuenow={stats[k]}>
-                  <div className="stat-fill" style={{ width: `${stats[k]}%` }} />
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
 
       {section && (
         <div className={`lcd-page section${panelOpen ? ' is-open' : ''}`}>

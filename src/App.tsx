@@ -1,6 +1,5 @@
 import { memo, useEffect, useRef, useState, type CSSProperties } from 'react'
 import Screen, { type Nav } from './Screen'
-import { ACTION_STAT, randomStats, STAT_DROP, type Action } from './content'
 import logo from './assets/bird-logo.svg'
 
 // The sky is a tunnel (see .sky / .deco in App.css): an egg-shaped corridor,
@@ -52,16 +51,16 @@ const lane = (kind: Kind): CSSProperties => {
   return FLAT.has(kind) ? { translate: at(x, y), rotate: lieOnWall(a) } : { translate: at(x, y) }
 }
 const PIECES: Deco[] = [
-  ...Array.from({ length: 40 }, (_, i) => ({ kind: 'sparkle' as const, s: rand(0.4, 0.9), t: rand(12, 19), c: SPARKLE_COLORS[i % 4] })),
-  { kind: 'moon', s: 5, t: 24.5 },
-  ...Array.from({ length: 5 }, () => ({ kind: 'star' as const, s: rand(1.6, 2.8), t: rand(12, 17) })),
-  ...Array.from({ length: 16 }, () => ({ kind: 'dash' as const, s: rand(1.4, 2.2), t: rand(8, 11) })),
-  ...Array.from({ length: 10 }, () => ({ kind: 'dot' as const, s: rand(1, 1.6), t: rand(9.5, 14) })),
-  ...Array.from({ length: 6 }, () => ({ kind: 'wave' as const, s: rand(2.2, 3), t: rand(8, 11) })),
-  ...Array.from({ length: 8 }, () => ({ kind: 'line' as const, s: rand(0.5, 0.8), t: rand(8, 11) })),
-  ...Array.from({ length: 6 }, () => ({ kind: 'swirl' as const, s: rand(2.5, 3.5), t: rand(8, 11) })),
+  ...Array.from({ length: 40 }, (_, i) => ({ kind: 'sparkle' as const, s: rand(0.4, 0.9), t: rand(14, 22), c: SPARKLE_COLORS[i % 4] })),
+  { kind: 'moon', s: 5, t: 29 },
+  ...Array.from({ length: 5 }, () => ({ kind: 'star' as const, s: rand(1.6, 2.8), t: rand(14, 20) })),
+  ...Array.from({ length: 16 }, () => ({ kind: 'dash' as const, s: rand(1.4, 2.2), t: rand(9.5, 13) })),
+  ...Array.from({ length: 10 }, () => ({ kind: 'dot' as const, s: rand(1, 1.6), t: rand(11, 16.5) })),
+  ...Array.from({ length: 6 }, () => ({ kind: 'wave' as const, s: rand(2.2, 3), t: rand(9.5, 13) })),
+  ...Array.from({ length: 8 }, () => ({ kind: 'line' as const, s: rand(0.5, 0.8), t: rand(9.5, 13) })),
+  ...Array.from({ length: 6 }, () => ({ kind: 'swirl' as const, s: rand(2.5, 3.5), t: rand(9.5, 13) })),
   // Two of each music symbol.
-  ...MUSIC.flatMap((kind) => Array.from({ length: 2 }, () => ({ kind, s: rand(2, 3.2), t: rand(12, 17) }))),
+  ...MUSIC.flatMap((kind) => Array.from({ length: 2 }, () => ({ kind, s: rand(2, 3.2), t: rand(14, 20) }))),
 ]
 // No per-piece start delay: in Chrome, differing start times make every flight
 // need main-thread frames (~6% CPU idle); with one start time they run fully on
@@ -116,7 +115,6 @@ const PIECES_IN = ['top', 'right', 'bottom', 'left'] as const
 // Three buttons: left / right spin the section wheel (or move the highlight on
 // an open page), the middle one selects. Screen.tsx does the work.
 export default function App() {
-  const [stats, setStats] = useState(randomStats)
   // Intro (all CSS-timed); see shouldPlayIntro for when it runs.
   const [intro, setIntro] = useState(PLAY_INTRO)
   const nav = useRef<((item: Nav) => void) | null>(null)
@@ -150,11 +148,6 @@ export default function App() {
       removeEventListener('touchend', up)
     }
   }, [])
-
-  function onAction(a: Action) {
-    const key = ACTION_STAT[a]
-    setStats((s) => ({ ...s, [key]: Math.max(0, s[key] - STAT_DROP) }))
-  }
 
   const buttons = [
     { id: 'a', label: 'Previous', press: () => send('left') },
@@ -192,7 +185,7 @@ export default function App() {
             </div>
           ))}
         <div className="screen">
-          <Screen stats={stats} navRef={nav} ready={!intro} onAction={onAction} />
+          <Screen navRef={nav} ready={!intro} />
           <div className="lcd-glass" aria-hidden="true" />
         </div>
         {buttons.map((b) => (

@@ -27,8 +27,6 @@
   --button-face: hsl(var(--blue-h) 65% 84%);
   --button-edge: hsl(var(--blue-h) 38% 44%);
   --gold: hsl(var(--gold-h) 70% 64%);
-  --gold-light: hsl(var(--gold-h) 78% 71%);
-  --gold-dot: hsl(var(--gold-h) 64% 60%);
   --gold-shadow: hsl(var(--gold-h) 62% 24%);
   --gold-fill: linear-gradient(135deg, hsl(var(--gold-h) 80% 76%), hsl(var(--gold-h) 62% 52%) 50%, hsl(var(--gold-h) 58% 37%));
   /* Black and white for the flying pieces only (App.tsx picks gold, black or
@@ -526,7 +524,9 @@ body {
   position: absolute;
   inset: 0;
   container-type: size;
-  overflow: hidden;
+  /* clip, not hidden: hidden still lets scrollIntoView (the highlighted link
+     on a page) scroll the LCD itself, which pushed a whole page up by 6px. */
+  overflow: clip;
   /* LCD palette (darkest, mid, lightest), drawn directly: an SVG colour
      filter here made every screen repaint re-run the filter on the CPU. */
   --ink: #26301f;
@@ -560,8 +560,6 @@ body {
 .wheel {
   position: absolute;
   inset: 0;
-  /* Fades in when it mounts, e.g. swapping to buddy's wheel and back. */
-  animation: peek-in 0.3s steps(3, end);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -609,7 +607,6 @@ body {
   font-size: 3.4cqw;
   white-space: nowrap;
   cursor: pointer;
-  transition: background 0.15s steps(1, end), color 0.15s steps(1, end), font-size 0.2s, padding 0.2s;
 }
 @media (hover: hover) {
   .wheel-item:hover:not(:disabled),
@@ -664,6 +661,34 @@ body {
   font-size: 5.4cqw;
   background: var(--ink);
   color: var(--paper);
+}
+/* Clicking buddy flips every box over like a card: each has the section on
+   its front and one of buddy's actions on its back (two faces stacked in one
+   grid cell, the back turned 180deg; each hides when facing away). */
+.wheel-slot {
+  perspective: 40cqw;
+}
+.wheel-item {
+  display: grid;
+  text-align: center;
+  transform-style: preserve-3d;
+}
+.wheel-face {
+  grid-area: 1 / 1;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transform: translateZ(0.1px); /* just off the box's own face, so it never fights it */
+}
+.wheel-back {
+  transform: rotateY(180deg) translateZ(0.1px);
+}
+.wheel-item {
+  transition-property: background, color, font-size, padding, transform;
+  transition-duration: 0.15s, 0.15s, 0.2s, 0.2s, 0.5s;
+  transition-timing-function: steps(1, end), steps(1, end), ease, ease, ease-in-out;
+}
+.wheel.is-flipped .wheel-item {
+  transform: rotateY(180deg);
 }
 .wheel-arrow {
   position: relative;
@@ -739,7 +764,7 @@ body {
 }
 /* Hidden under an open page: Safari drew his GPU layer over the page (his
    feet poked out below the last link), and nothing needs him there. */
-.lcd:has(.lcd-page:not(.section), .lcd-page.is-open) .buddy {
+.lcd:has(.lcd-page.is-open) .buddy {
   visibility: hidden;
 }
 .buddy.is-left {
@@ -896,6 +921,12 @@ body {
   from { opacity: 0; translate: 0 3cqh; }
 }
 
+/* Never squeezed by a page with lots of links: the back button and title
+   keep their size and place on every page. */
+.lcd-page > .back-btn,
+.lcd-page > .page-title {
+  flex-shrink: 0;
+}
 .back-btn {
   align-self: flex-start;
   padding: 1.5cqw 2.5cqw;
@@ -1016,30 +1047,6 @@ body {
   margin-top: 1cqh;
   font-size: 3.4cqw;
   line-height: 1.4;
-}
-
-.stats {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 3cqh;
-  font-size: 3.4cqw;
-}
-.stats li {
-  display: grid;
-  gap: 1cqh;
-}
-.stat-bar {
-  height: 6cqh;
-  border: 0.8cqw solid var(--ink);
-  padding: 0.5cqw;
-}
-.stat-fill {
-  height: 100%;
-  transition: width 0.4s steps(5, end);
-  background: repeating-linear-gradient(to right, var(--ink) 0 2cqw, transparent 2cqw 2.8cqw);
 }
 
 /* ---------- Intro (plays once on load) ----------
@@ -1163,5 +1170,8 @@ body {
   .deco,
   .deco-wave::after {
     animation-play-state: paused;
+  }
+  .wheel-item {
+    transition: none;
   }
 }
