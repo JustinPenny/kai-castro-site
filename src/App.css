@@ -121,7 +121,12 @@ body {
    Perf: the flight is one transform with no variables in its keyframes, so
    the browser can run every flight on the GPU. Keep it that way. */
 
-.sky {
+/* The 3D lives on an inner layer, not on .sky itself: Safari on iPhone drew
+   none of the pieces when the perspective was on the same element that clips
+   to the egg and masks out the logo. */
+.tunnel {
+  position: absolute;
+  inset: 0;
   perspective: 40cqw;
 }
 

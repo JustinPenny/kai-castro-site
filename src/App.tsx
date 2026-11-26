@@ -96,15 +96,17 @@ const PLAY_INTRO = shouldPlayIntro()
 const Sky = memo(function Sky() {
   return (
     <div className="sky" aria-hidden="true">
-      {DECOR.map(({ kind, s, t, c, fill, place }, i) => (
-        <i
-          key={i}
-          className={`deco deco-${kind}${FLAT.has(kind) ? ' is-flat' : ''}`}
-          style={{ '--s': `${s}cqw`, '--t': `${t}s`, '--c': c, '--fill': fill, ...place } as CSSProperties}
-          // A new spot (and, lying flat, the tilt that goes with it).
-          onAnimationIteration={RELANE.has(kind) ? (e) => Object.assign(e.currentTarget.style, lane(kind)) : undefined}
-        />
-      ))}
+      <div className="tunnel">
+        {DECOR.map(({ kind, s, t, c, fill, place }, i) => (
+          <i
+            key={i}
+            className={`deco deco-${kind}${FLAT.has(kind) ? ' is-flat' : ''}`}
+            style={{ '--s': `${s}cqw`, '--t': `${t}s`, '--c': c, '--fill': fill, ...place } as CSSProperties}
+            // A new spot (and, lying flat, the tilt that goes with it).
+            onAnimationIteration={RELANE.has(kind) ? (e) => Object.assign(e.currentTarget.style, lane(kind)) : undefined}
+          />
+        ))}
+      </div>
     </div>
   )
 })
